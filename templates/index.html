@@ -1,0 +1,194 @@
+{% extends "navbar.html" %}
+
+{% block title %}Dashboard - Compras y Recepciones{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+<script defer src="{{ url_for('static', filename='js/index.js') }}"></script>
+
+<main class="dashboard-container">
+  <header class="dashboard-header">
+    <h1>Dashboard — Compras & Recepciones</h1>
+    <p class="subtitle">Resumen y faltantes — extraído de datos_compras / recepciones</p>
+  </header>
+
+  <!-- FILTROS -->
+  <section class="filters-card card">
+    <div class="filters-grid">
+      <div class="field">
+        <label for="filter-fecha-desde">Fecha desde</label>
+        <input id="filter-fecha-desde" type="date">
+      </div>
+      <div class="field">
+        <label for="filter-fecha-hasta">Fecha hasta</label>
+        <input id="filter-fecha-hasta" type="date">
+      </div>
+
+      <div class="field">
+        <label for="filter-estado">Estado recepción</label>
+        <select id="filter-estado">
+          <option value="">Todos</option>
+          <option value="completa">Completa</option>
+          <option value="parcial">Parcial</option>
+          <option value="pendiente">Pendiente</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="filter-proveedor">Proveedor</label>
+        <select id="filter-proveedor"><option value="">Todos</option></select>
+      </div>
+
+      <div class="field">
+        <label for="filter-responsable">Responsable</label>
+        <select id="filter-responsable"><option value="">Todos</option></select>
+      </div>
+
+      <div class="field">
+        <label for="filter-cliente">Cliente / Nombre</label>
+        <select id="filter-cliente"><option value="">Todos</option></select>
+      </div>
+
+      <div class="field field-actions">
+        <button id="btn-aplicar-filtros" class="btn btn-apply">
+          <i class="fas fa-filter" aria-hidden="true"></i>
+          <span>Aplicar filtros</span>
+        </button>
+        <button id="btn-limpiar-filtros" class="btn btn-clear">
+          <i class="fas fa-eraser" aria-hidden="true"></i>
+          <span>Limpiar filtros</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TARJETAS RESUMEN -->
+  <section class="cards-row">
+    <div class="card stat">
+      <div class="stat-title">Total Compras</div>
+      <div id="stat-total-compras" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat success">
+      <div class="stat-title">Ordenes Recibidas Totalmente</div>
+      <div id="stat-ordenes-completas" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat warning">
+      <div class="stat-title">Ordenes Pendientes por Recibir</div>
+      <div id="stat-ordenes-pendientes" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat">
+      <div class="stat-title">Unidades Compradas</div>
+      <div id="stat-total-unidades" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat">
+      <div class="stat-title">Unidades Recibidas</div>
+      <div id="stat-unidades-recibidas" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat">
+      <div class="stat-title">Unidades Faltantes</div>
+      <div id="stat-unidades-faltantes" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat">
+      <div class="stat-title">Valor Total (sin IVA)</div>
+      <div id="stat-valor-total" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat">
+      <div class="stat-title">Valor Recibido</div>
+      <div id="stat-valor-recibido" class="stat-value">0</div>
+    </div>
+
+    <div class="card stat">
+      <div class="stat-title">Valor Faltante</div>
+      <div id="stat-valor-faltante" class="stat-value">0</div>
+    </div>
+  </section>
+
+  <!-- MINI TABLA: FALTANTES -->
+  <section class="card table-card">
+    <h3>Resumen de Faltantes (Solo Parciales)</h3>
+    <div class="table-wrap">
+      <table class="mini-table">
+        <thead>
+          <tr>
+            <th>Fecha Compra</th>
+            <th>OC Coltrade</th>
+            <th>Pedido Proveedor</th>
+            <th>Factura Proveedor</th>
+            <th>Proveedor</th>
+            <th>Unidades Compradas</th>
+            <th>Unidades Faltantes</th>
+            <th>Valor Faltante</th>
+          </tr>
+        </thead>
+        <tbody id="faltantes-body">
+          <tr><td colspan="8" class="muted">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span id="faltantes-count">0</span> filas
+    </div>
+  </section>
+
+  <section class="tables-row">
+    <section class="card table-card">
+      <h3>Ordenes Recibidas Totalmente</h3>
+      <div class="table-wrap">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Fecha Compra</th>
+              <th>OC Coltrade</th>
+              <th>Pedido Proveedor</th>
+              <th>Factura Proveedor</th>
+              <th>Proveedor</th>
+              <th>Unidades Compradas</th>
+              <th>Unidades Recibidas</th>
+              <th>Valor Recibido</th>
+            </tr>
+          </thead>
+          <tbody id="recibidas-body">
+            <tr><td colspan="8" class="muted">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span id="recibidas-count">0</span> filas
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <h3>Ordenes Pendientes por Recibir</h3>
+      <div class="table-wrap">
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Fecha Compra</th>
+              <th>OC Coltrade</th>
+              <th>Pedido Proveedor</th>
+              <th>Factura Proveedor</th>
+              <th>Proveedor</th>
+              <th>Unidades Compradas</th>
+              <th>Unidades Faltantes</th>
+              <th>Valor Pendiente</th>
+            </tr>
+          </thead>
+          <tbody id="pendientes-body">
+            <tr><td colspan="8" class="muted">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <span id="pendientes-count">0</span> filas
+      </div>
+    </section>
+  </section>
+</main>
+{% endblock %}

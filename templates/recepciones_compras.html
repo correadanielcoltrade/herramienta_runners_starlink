@@ -1,0 +1,73 @@
+{% extends "navbar.html" %}
+
+{% block title %}Recepciones{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/recepciones_compras.css') }}">
+<script defer src="{{ url_for('static', filename='js/recepciones_compras.js') }}"></script>
+
+<main class="recepciones-container" aria-live="polite">
+  <h2>Modulo Recepciones</h2>
+
+  <div class="card">
+    <p class="muted">Selecciona la fila y diligencia los campos editables. Los campos no editables vienen de Datos Compras.</p>
+
+<!-- FILTRO DE ESTADO RECEPCION (agregar dentro de .card, antes de .table-wrap) -->
+<div class="filtros-recepciones" style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+  <label for="filter-estado-recepcion-recep" style="font-weight:600; color:var(--text-muted);">Filtro estado recepción</label>
+  <select id="filter-estado-recepcion-recep" style="padding:6px 8px; border-radius:6px; border:1px solid var(--border-color);">
+    <option value="">Todos</option>
+    <option value="completa">Completa</option>
+    <option value="parcial">Parcial</option>
+    <option value="pendiente">Pendiente</option>
+  </select>
+
+  <button id="btn-limpiar-filtro-recep" class="btn" type="button" style="margin-left:6px;">Limpiar filtro</button>
+
+  
+<div class="search-container">
+  <!-- <label for="input-busqueda-recep">Buscar</label> -->
+  <input 
+    type="text"
+    id="input-busqueda-recep"
+    class="search-input"
+    placeholder="buscar por Cliente, # Orden, factura, proveedor..."
+  >
+</div>
+
+</div>
+
+
+    <div class="table-wrap">
+      <table class="recepciones-table" aria-describedby="info-recepciones">
+        <thead>
+          <tr>
+            <th>ID Compra</th>
+            <th>Cliente</th>
+            <th>Producto</th>
+            <th>OC COLTRADE</th>
+            <th>Pedido proveedor</th>
+            <th>Factura proveedor</th>
+            <th>Proveedor</th>
+            <th>Cantidad</th>
+
+            <!-- Editables -->
+            <th>Fecha llegada</th>
+            <th>RC ODOO</th>
+            <th>Fecha recibo ODOO</th>
+            <th>Metodo entrega</th>
+            <th>Unidades recibidas</th>
+            <th>Unidades faltantes</th>
+            <th>Observaciones OPS</th>
+
+            <th>Accion</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-recepciones" aria-live="polite" aria-atomic="true"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+{% endblock %}

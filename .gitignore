@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local environment / secrets
+.env
+
+# Sensitive local data
+data/login.json
+
+# Optional local IDE/system files
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,109 @@
+﻿{% extends "navbar.html" %}
+
+{% block title %}Panel Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_panel.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="admin-panel-container">
+  <section class="admin-card">
+    <h2>Crear usuario</h2>
+    <p class="card-subtitle">Registra un usuario y define sus roles.</p>
+
+    <form id="create-user-form" class="admin-form" novalidate>
+      <div class="field">
+        <label for="create-correo">Correo</label>
+        <input id="create-correo" type="email" autocomplete="off" required>
+      </div>
+
+      <div class="field">
+        <label for="create-contrasena">Contrasena temporal</label>
+        <input id="create-contrasena" type="password" autocomplete="new-password" required>
+      </div>
+
+      <fieldset class="roles-fieldset">
+        <legend>Roles</legend>
+        <label><input id="create-role-admin" type="checkbox" value="admin"> Admin</label>
+        <label><input id="create-role-compras" type="checkbox" value="compras"> Compras</label>
+        <label><input id="create-role-recepcion" type="checkbox" value="recepcion"> Recepcion</label>
+      </fieldset>
+
+      <div class="form-actions">
+        <button id="btn-create-user" class="btn primary" type="submit">Crear usuario</button>
+      </div>
+      <p id="create-feedback" class="feedback" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="admin-card wide">
+    <div class="card-header-row">
+      <div>
+        <h2>Usuarios</h2>
+        <p class="card-subtitle">Gestiona roles, cambia contrasenas o elimina cuentas.</p>
+      </div>
+      <button id="btn-refresh-users" class="btn" type="button">Actualizar</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Correo</th>
+            <th>Roles</th>
+            <th>Contrasena</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="users-table-body">
+          <tr>
+            <td colspan="4" class="muted">Cargando usuarios...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div id="edit-user-modal" class="modal-overlay hidden" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Editar usuario</h3>
+      <button id="btn-close-modal" class="modal-close" type="button" aria-label="Cerrar">&times;</button>
+    </div>
+
+    <form id="edit-user-form" class="admin-form" novalidate>
+      <div class="field">
+        <label for="edit-correo">Correo</label>
+        <input id="edit-correo" type="email" readonly>
+      </div>
+
+      <div class="field">
+        <label for="edit-contrasena">Nueva contrasena (opcional)</label>
+        <input id="edit-contrasena" type="password" autocomplete="new-password">
+      </div>
+
+      <fieldset class="roles-fieldset">
+        <legend>Roles</legend>
+        <label><input id="edit-role-admin" type="checkbox" value="admin"> Admin</label>
+        <label><input id="edit-role-compras" type="checkbox" value="compras"> Compras</label>
+        <label><input id="edit-role-recepcion" type="checkbox" value="recepcion"> Recepcion</label>
+      </fieldset>
+
+      <div class="form-actions between">
+        <button id="btn-delete-user" class="btn danger" type="button">Eliminar usuario</button>
+        <div class="right-actions">
+          <button id="btn-cancel-edit" class="btn" type="button">Cancelar</button>
+          <button id="btn-save-user" class="btn primary" type="submit">Guardar cambios</button>
+        </div>
+      </div>
+      <p id="edit-feedback" class="feedback" aria-live="polite"></p>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="{{ url_for('static', filename='js/admin_panel.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,283 @@
+{% extends "navbar.html" %}
+
+{% block title %}Datos Compras{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/datos_compras.css') }}">
+<script defer src="{{ url_for('static', filename='js/datos_compras.js') }}"></script>
+
+<main class="datos-container" aria-live="polite">
+  <h2>Modulo Datos Compras</h2>
+
+  <!-- Botón Nuevo + Import/Export -->
+  <div class="header-actions">
+  <button id="btn-nuevo" class="btn primary" type="button">+ Nuevo Registro</button>
+  <button id="btn-descargar-plantilla" class="btn" type="button">Descargar Plantilla</button>
+  <label for="input-import-file" class="btn" style="display:inline-block; cursor:pointer; margin-left:6px;">
+    Importar Excel
+  </label>
+  <input id="input-import-file" type="file" accept=".xlsx" style="display:none" />
+  <button id="btn-exportar" class="btn" type="button" style="margin-left:6px;">Exportar Excel</button>
+
+  <!-- NUEVO: exportar solo faltantes (parcial) -->
+  <button id="btn-export-faltantes" class="btn" type="button" style="margin-left:6px;">
+    Reporte de Faltantes
+  </button>
+</div>
+
+  <!-- =========================
+       MODAL CREAR COMPRA
+  ========================== -->
+  <div id="modal-compra" class="modal-overlay hidden">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h3 id="modal-title">Nueva Compra</h3>
+        <button type="button" id="cerrar-modal" class="modal-close">&times;</button>
+      </div>
+
+      <form id="form-datos-compras" class="form-section" novalidate>
+
+        <input id="id" type="hidden">
+
+        <div class="field">
+          <label for="fecha_compra">Fecha de compra</label>
+          <input id="fecha_compra" type="date">
+        </div>
+
+        <div class="field">
+          <label for="responsable_compra">Responsable de compra</label>
+          <input id="responsable_compra" type="text">
+        </div>
+
+        <div class="field">
+          <label for="codigo">Codigo</label>
+          <input id="codigo" type="text">
+        </div>
+
+        <div class="field">
+          <label for="nombre">Nombre</label>
+          <input id="nombre" type="text">
+        </div>
+
+        <div class="field">
+          <label for="tipo_id">Tipo ID</label>
+          <input id="tipo_id" type="text">
+        </div>
+
+        <div class="field">
+          <label for="identificacion"># de identificacion</label>
+          <input id="identificacion" type="text">
+        </div>
+
+        <div class="field">
+          <label for="tipo_empresa">Tipo de empresa</label>
+          <input id="tipo_empresa" type="text">
+        </div>
+
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input id="email" type="email">
+        </div>
+
+        <div class="field">
+          <label for="precio_unitario_sin_iva">Precio unitario sin IVA</label>
+          <input id="precio_unitario_sin_iva" type="number" step="0.01">
+        </div>
+
+        <div class="field">
+          <label for="precio_unitario_con_iva">Precio unitario con IVA</label>
+          <input id="precio_unitario_con_iva" type="number" step="0.01">
+        </div>
+
+        <div class="field">
+          <label for="cantidad_comprada">Cantidad comprada</label>
+          <input id="cantidad_comprada" type="number" min="0">
+        </div>
+
+        <div class="field">
+          <label for="valor_total_compra">Valor total compra</label>
+          <input id="valor_total_compra" type="number" readonly>
+        </div>
+
+        <div class="field">
+          <label for="descripcion">Descripcion</label>
+          <input id="descripcion" type="text">
+        </div>
+
+        <div class="field">
+          <label for="tipo_compra">Tipo compra</label>
+          <input id="tipo_compra" type="text">
+        </div>
+
+        <div class="field">
+          <label for="pedido_proveedor"># pedido proveedor</label>
+          <input id="pedido_proveedor" type="text">
+        </div>
+
+        <div class="field">
+          <label for="factura_proveedor"># factura proveedor</label>
+          <input id="factura_proveedor" type="text">
+        </div>
+
+        <div class="field">
+          <label for="oc_coltrade"># OC COLTRADE</label>
+          <input id="oc_coltrade" type="text">
+        </div>
+
+        <div class="field">
+          <label for="estado_compra">Estado compra</label>
+          <input id="estado_compra" type="text">
+        </div>
+
+        <div class="field">
+          <label for="tipo_entrega">Tipo de entrega</label>
+          <input id="tipo_entrega" type="text">
+        </div>
+
+        <div class="field">
+          <label for="fecha_llegada_nodo">Fecha llegada nodo</label>
+          <input id="fecha_llegada_nodo" type="date">
+        </div>
+
+        <div class="field">
+          <label for="fecha_confirmacion_recoleccion">Fecha confirmacion recoleccion</label>
+          <input id="fecha_confirmacion_recoleccion" type="date">
+        </div>
+
+        <div class="field">
+          <label for="proveedor">Proveedor</label>
+          <input id="proveedor" type="text">
+        </div>
+
+        <div class="field">
+          <label for="tienda_compra">Tienda Compra</label>
+          <input id="tienda_compra" type="text">
+        </div>
+
+        <div class="field">
+          <label for="palabra_clave_meli">Palabra clave Meli</label>
+          <input id="palabra_clave_meli" type="text">
+        </div>
+
+        <div class="field">
+          <label for="banco_origen">Banco origen</label>
+          <input id="banco_origen" type="text">
+        </div>
+
+        <div class="field field-textarea">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button id="guardar-btn" type="button" class="btn primary">Guardar</button>
+          <button id="limpiar-btn" type="button" class="btn">Limpiar</button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+  <!-- FIN MODAL -->
+
+
+  <!-- FILTROS -->
+<div class="filtros-bar">
+  <div class="filtro-item">
+    <label for="filter-search">Buscar</label>
+    <input id="filter-search" type="search" placeholder="buscar por nombre, código, descripción, proveedor...">
+  </div>
+
+  <div class="filtro-item">
+    <label for="filter-fecha-desde">Fecha desde</label>
+    <input id="filter-fecha-desde" type="date">
+  </div>
+
+  <div class="filtro-item">
+    <label for="filter-fecha-hasta">Fecha hasta</label>
+    <input id="filter-fecha-hasta" type="date">
+  </div>
+
+  <div class="filtro-item">
+    <label for="filter-estado-recepcion">Estado recepción</label>
+    <select id="filter-estado-recepcion">
+      <option value="">Todos</option>
+      <option value="completa">Completa</option>
+      <option value="pendiente">Pendiente</option>
+      <option value="parcial">Parcial</option>
+    </select>
+  </div>
+
+  <div class="filtro-item acciones-filtros">
+    <label style="visibility:hidden">.</label>
+    <div>
+      <button id="btn-aplicar-filtros" class="btn">Aplicar</button>
+      <button id="btn-limpiar-filtros" class="btn">Limpiar filtros</button>
+    </div>
+  </div>
+
+  <div class="filtro-item columnas-filtros">
+    <label for="btn-columnas">Columnas visibles</label>
+    <div id="columnas-control" class="columnas-control">
+      <button id="btn-columnas" class="btn" type="button">Seleccionar columnas</button>
+      <button id="btn-columnas-reset" class="btn" type="button">Mostrar todas</button>
+      <div id="columnas-panel" class="columnas-panel hidden">
+        <div id="columnas-list" class="columnas-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  <!-- =========================
+       TABLA
+  ========================== -->
+  <div class="tabla-section">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Fecha compra</th>
+          <th>Responsable</th>
+          <th>Codigo</th>
+          <th>Nombre</th>
+          <th>Tipo ID</th>
+          <th>Identificacion</th>
+          <th>Tipo empresa</th>
+          <th>Email</th>
+          <th>Precio sin IVA</th>
+          <th>Precio con IVA</th>
+          <th>Cantidad comprada</th>
+          <th>Valor total</th>
+          <th>Descripcion</th>
+          <th>Tipo compra</th>
+          <th>Pedido proveedor</th>
+          <th>Factura proveedor</th>
+          <th>OC COLTRADE</th>
+          <th>Estado compra</th>
+          <th>Tipo entrega</th>
+          <th>Fecha llegada nodo</th>
+          <th>Fecha confirmacion recoleccion</th>
+          <th>Proveedor</th>
+          <th>Tienda compra</th>
+          <th>Palabra clave Meli</th>
+          <th>Recepcion en ODOO</th>
+          <th>Fecha recibo</th>
+          <th>Banco origen</th>
+          <th>Observaciones</th>
+          <th>Observaciones OPS</th>
+          <th>Unidades Recibidas</th>
+          <th>Unidades Faltantes</th>
+          <th>Estado Recepcion</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+{% endblock %}

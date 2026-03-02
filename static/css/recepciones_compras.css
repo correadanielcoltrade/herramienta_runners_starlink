@@ -1,0 +1,478 @@
+/* ============================================
+   VARIABLES Y CONFIGURACIÓN GLOBAL
+   ============================================ */
+:root {
+  --primary-color: #0a66c2;
+  --primary-hover: #004182;
+  --primary-light: rgba(10, 102, 194, 0.1);
+  --secondary-color: #6c757d;
+  --secondary-hover: #5a6268;
+  --success-bg: #e9fbef;
+  --success-border: #bfe6c9;
+  --success-text: #11692e;
+  --warning-bg: #fff9e6;
+  --warning-border: #f3e2a8;
+  --warning-text: #806000;
+  --danger-bg: #ffecec;
+  --danger-border: #f1bcbc;
+  --danger-text: #9b1e1e;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --bg-light: #f8fafc;
+  --bg-white: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', sans-serif;
+  --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Cascadia Code', 'Consolas', monospace;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --transition: all 0.2s ease;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================
+   CONTENEDOR PRINCIPAL
+   ============================================ */
+.recepciones-container {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem 2.5rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background-color: var(--bg-light);
+  min-height: 100vh;
+}
+
+.recepciones-container h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+  border-left: 5px solid var(--primary-color);
+  padding-left: 1rem;
+}
+
+/* ============================================
+   TEXTO MUTED / DESCRIPCIÓN
+   ============================================ */
+.muted {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  margin-bottom: 1rem;
+}
+
+/* ============================================
+   TARJETA (CARD)
+   ============================================ */
+.card {
+  background-color: var(--bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+/* ============================================
+   CONTENEDOR DE TABLA CON SCROLL
+   ============================================ */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-white);
+}
+
+/* ============================================
+   TABLA PRINCIPAL
+   ============================================ */
+.recepciones-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1600px; /* Ajusta según la cantidad real de columnas */
+  font-size: 0.8125rem;
+  table-layout: auto;
+  white-space: nowrap;
+}
+
+.recepciones-table thead {
+  background-color: #f1f5f9;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.recepciones-table th {
+  padding: 0.875rem 1rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  text-align: left;
+  border-right: 1px solid var(--border-color);
+  background-color: #f1f5f9;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.recepciones-table th:last-child {
+  border-right: none;
+}
+
+.recepciones-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  color: var(--text-primary);
+  background-color: var(--bg-white);
+}
+
+.recepciones-table td:last-child {
+  border-right: none;
+}
+
+.recepciones-table tbody tr {
+  transition: var(--transition);
+}
+
+/* Hover normal (sin estado) */
+.recepciones-table tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* ============================================
+   ESTILOS PARA INPUTS EDITABLES DENTRO DE LA TABLA
+   ============================================ */
+.recepciones-table input,
+.recepciones-table select {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-light);
+  transition: var(--transition);
+  color: var(--text-primary);
+}
+
+.recepciones-table input:focus,
+.recepciones-table select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background-color: var(--bg-white);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.recepciones-table input[readonly] {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+  border-color: transparent;
+}
+
+/* ============================================
+   BOTONES DE ACCIÓN DENTRO DE LA TABLA
+   ============================================ */
+.recepciones-table .btn-accion {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background-color: var(--primary-color);
+  color: white;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.recepciones-table .btn-accion:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.recepciones-table .btn-accion:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   ESTADOS DE RECEPCIÓN A NIVEL DE FILA
+   ============================================ */
+/* Fila completa */
+tr.estado-completo {
+  background-color: var(--success-bg) !important;
+}
+tr.estado-completo td {
+  background-color: transparent !important;
+  color: var(--success-text);
+  font-weight: 500;
+}
+
+/* Fila pendiente */
+tr.estado-pendiente {
+  background-color: var(--warning-bg) !important;
+}
+tr.estado-pendiente td {
+  background-color: transparent !important;
+  color: var(--warning-text);
+  font-weight: 500;
+}
+
+/* Fila faltante (parcial) */
+tr.estado-faltante {
+  background-color: var(--danger-bg) !important;
+}
+tr.estado-faltante td {
+  background-color: transparent !important;
+  color: var(--danger-text);
+  font-weight: 500;
+}
+
+/* Hover sobre filas con estado */
+.recepciones-table tbody tr.estado-completo:hover {
+  background-color: color-mix(in srgb, var(--success-bg), black 5%) !important;
+}
+.recepciones-table tbody tr.estado-pendiente:hover {
+  background-color: color-mix(in srgb, var(--warning-bg), black 5%) !important;
+}
+.recepciones-table tbody tr.estado-faltante:hover {
+  background-color: color-mix(in srgb, var(--danger-bg), black 5%) !important;
+}
+/* Mantener el color del texto en hover */
+.recepciones-table tbody tr.estado-completo:hover td,
+.recepciones-table tbody tr.estado-pendiente:hover td,
+.recepciones-table tbody tr.estado-faltante:hover td {
+  color: inherit;
+}
+
+/* ============================================
+   LEYENDA DE ESTADOS (OPCIONAL)
+   ============================================ */
+.recepcion-legend {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+  background-color: var(--bg-white);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.recepcion-legend .box {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-right: 0.375rem;
+  border: 1px solid transparent;
+}
+
+.recepcion-legend .box.completo {
+  background-color: var(--success-bg);
+  border-color: var(--success-border);
+}
+
+.recepcion-legend .box.pendiente {
+  background-color: var(--warning-bg);
+  border-color: var(--warning-border);
+}
+
+.recepcion-legend .box.faltante {
+  background-color: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
+/* ============================================
+   ALINEACIÓN PARA COLUMNAS NUMÉRICAS
+   ============================================ */
+.recepciones-table td:nth-child(8),  /* Cantidad */
+.recepciones-table td:nth-child(13), /* Unidades recibidas */
+.recepciones-table td:nth-child(14)  /* Unidades faltantes */ {
+  text-align: right;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .recepciones-container {
+    padding: 1.5rem 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .recepciones-container h2 {
+    font-size: 1.5rem;
+  }
+
+  .table-wrap {
+    border-radius: var(--radius-sm);
+  }
+}
+
+/* ====================================
+   Botones (estilo base y variantes)
+   ==================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;      /* 10px 20px */
+  font-size: 0.875rem;           /* 14px */
+  font-weight: 500;
+  line-height: 1.5;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  background-color: var(--bg-white);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+  gap: 0.5rem;
+}
+
+/* hover general */
+.btn:hover {
+  background-color: var(--bg-light);
+  border-color: var(--text-muted);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* variante primaria */
+.btn.primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  box-shadow: 0 2px 4px rgba(10,102,194,0.2);
+}
+
+.btn.primary:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  box-shadow: 0 4px 8px rgba(10,102,194,0.3);
+}
+
+/* active general */
+.btn:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* focus accesible */
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+}
+
+/* disabled */
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ================================
+   Ajustes específicos para el
+   botón limpiar filtro (id)
+   ================================ */
+
+#btn-limpiar-filtro-recep {
+  /* Reutiliza la base .btn pero con un tamaño ligeramente menor visual */
+  padding: 0.5rem 0.875rem;      /* 8px 14px - más compacto */
+  font-size: 0.8125rem;         /* 13px */
+  border-radius: calc(var(--radius-md) - 2px);
+  background-color: var(--bg-white);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Hover específico (más sutil para toolbar) */
+#btn-limpiar-filtro-recep:hover {
+  background-color: #f8fafc; /* muy ligero */
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* focus accesible para el id */
+#btn-limpiar-filtro-recep:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+}
+
+/* CONTENEDOR */
+.search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 320px;
+}
+
+/* LABEL */
+.search-container label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #6b7280; /* gris medio */
+  text-transform: uppercase;
+}
+
+/* INPUT */
+.search-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.9rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  background-color: #f3f4f6; /* gris claro */
+  color: #374151;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+/* Placeholder */
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+/* Hover */
+.search-input:hover {
+  border-color: #9ca3af;
+}
+
+/* Focus */
+.search-input:focus {
+  background-color: #ffffff;
+  border-color: #2563eb; /* azul elegante */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}

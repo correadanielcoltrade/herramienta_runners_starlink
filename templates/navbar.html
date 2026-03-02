@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/navbar.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+    <div class="navbar-container">
+
+        <a href="/inicio/" class="navbar-brand">
+            <span class="brand-starlink" aria-label="Starlink">
+                <span class="brand-starlink-swoosh"></span>
+                <span class="brand-starlink-word">STARLINK</span>
+            </span>
+        </a>
+
+        <div id="mobile-menu" class="navbar-toggle">
+            <span class="toggle-bar"></span>
+            <span class="toggle-bar"></span>
+            <span class="toggle-bar"></span>
+        </div>
+
+        <ul id="navbar-menu" class="navbar-menu">
+
+            {% if is_authenticated %}
+
+                <!-- RESUMEN (lo pueden ver compras, recepcion y admin) -->
+                {% if has_role("compras") or has_role("recepcion") %}
+                <li class="nav-item">
+                    <a href="/inicio/" class="nav-link">
+                        <i class="fas fa-home nav-icon"></i>
+                        <span class="nav-text">Resumen Compras y Recepciones</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- DATOS COMPRAS -->
+                {% if has_role("compras") %}
+                <li class="nav-item">
+                    <a href="/datos-compras/" class="nav-link">
+                        <i class="fas fa-file-import nav-icon"></i>
+                        <span class="nav-text">Datos Compras</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- PROCESO RECEPCION -->
+                {% if has_role("recepcion") %}
+                <li class="nav-item">
+                    <a href="/recepciones/" class="nav-link">
+                        <i class="fas fa-exchange-alt nav-icon"></i>
+                        <span class="nav-text">Proceso de Recepcion de Compras</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- ADMIN EXTRA (si algun dia agregas mas modulos) -->
+                {% if has_role("admin") %}
+                <li class="nav-item">
+                    <a href="/admin-panel/" class="nav-link">
+                        <i class="fas fa-user-shield nav-icon"></i>
+                        <span class="nav-text">Panel Admin</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                <!-- LOGOUT -->
+                <li class="nav-item">
+                    <button id="logout-btn" class="nav-link btn-link" type="button">
+                        <i class="fas fa-sign-out-alt nav-icon"></i>
+                        <span class="nav-text">Cerrar sesion</span>
+                    </button>
+                </li>
+
+            {% else %}
+
+                <li class="nav-item">
+                    <a href="/iniciar-sesion/" class="nav-link">
+                        <i class="fas fa-sign-in-alt nav-icon"></i>
+                        <span class="nav-text">Login</span>
+                    </a>
+                </li>
+
+            {% endif %}
+
+        </ul>
+    </div>
+</nav>
+
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+
+    <script src="/static/js/navbar.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
