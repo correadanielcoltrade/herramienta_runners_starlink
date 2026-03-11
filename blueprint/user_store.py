@@ -1,10 +1,9 @@
 import json
 import os
 from typing import Any, Dict, List
+from blueprint.storage import data_file, write_json_atomic
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.normpath(os.path.join(BASE_DIR, "..", "data"))
-DEFAULT_USERS_FILE = os.path.join(DATA_DIR, "login.json")
+DEFAULT_USERS_FILE = data_file("login.json")
 
 
 def users_file_path() -> str:
@@ -44,11 +43,6 @@ def load_users() -> List[Dict[str, Any]]:
 
 def save_users(users: List[Dict[str, Any]]) -> str:
     path = users_file_path()
-    parent = os.path.dirname(path)
-    if parent:
-        os.makedirs(parent, exist_ok=True)
-
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(users, f, indent=2, ensure_ascii=False)
+    write_json_atomic(path, users, indent=2)
 
     return path

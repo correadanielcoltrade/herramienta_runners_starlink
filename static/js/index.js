@@ -79,7 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const fallback = [
       item.pedido_proveedor,
       item.factura_proveedor,
-      item.codigo,
       item.proveedor,
       item.nombre,
       normalizeDateForFilter(item.fecha_compra)
@@ -136,7 +135,6 @@ document.addEventListener("DOMContentLoaded", () => {
         id,
         fecha_compra: c.fecha_compra || "",
         responsable_compra: c.responsable_compra || "",
-        codigo: c.codigo || "",
         nombre: c.nombre || c.cliente || "",
         descripcion: c.descripcion || c.producto || "",
         proveedor: c.proveedor || "",
@@ -145,6 +143,8 @@ document.addEventListener("DOMContentLoaded", () => {
         factura_proveedor: c.factura_proveedor || "",
         cantidad_comprada: cantidad,
         precio_unitario_sin_iva: parseNumber(c.precio_unitario_sin_iva || 0),
+        precio_unitario_con_iva: parseNumber(c.precio_unitario_con_iva || 0),
+        valor_flete: parseNumber(c.valor_flete || 0),
         valor_total_compra: parseNumber(c.valor_total_compra || 0),
         unidades_recibidas: recibidas,
         unidades_faltantes: faltantes,
@@ -259,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (q) {
         // keys to ignore except values; we'll check common text fields
         const hay = [
-          item.responsable_compra, item.codigo, item.nombre, item.descripcion,
+          item.responsable_compra, item.nombre, item.descripcion,
           item.proveedor, item.oc_coltrade, item.pedido_proveedor, item.factura_proveedor
         ].some(v => v && String(v).toLowerCase().includes(q));
         if (!hay) return false;
@@ -282,6 +282,31 @@ document.addEventListener("DOMContentLoaded", () => {
     return deriveEstadoFromValues(cantidad, recibidas);
   }
 
+  function computeValores(item, cantidad, recibidas, faltantes) {
+    const precioSin = parseNumber(item.precio_unitario_sin_iva || 0);
+    const precioCon = parseNumber(item.precio_unitario_con_iva || 0);
+    const flete = parseNumber(item.valor_flete || 0);
+    const precioBase = precioCon > 0 ? precioCon : precioSin;
+
+    let total = parseNumber(item.valor_total_compra || 0);
+    if (!total) total = (precioBase * cantidad) + flete;
+
+    let fleteRec = 0;
+    let fleteFalt = 0;
+    if (cantidad > 0 && flete > 0) {
+      fleteRec = flete * (recibidas / cantidad);
+      fleteFalt = flete * (faltantes / cantidad);
+    }
+
+    return {
+      precioBase,
+      flete,
+      total,
+      valorRecibido: (precioBase * recibidas) + fleteRec,
+      valorFaltante: (precioBase * faltantes) + fleteFalt
+    };
+  }
+
   // calcular y renderizar tarjetas
   function renderStats(data) {
     const totalCompras = data.length;
@@ -299,19 +324,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const recibidasRaw = Math.max(0, parseNumber(item.unidades_recibidas || 0));
       const recibidas = cantidad > 0 ? Math.min(recibidasRaw, cantidad) : recibidasRaw;
       const faltantes = Math.max(0, parseNumber(item.unidades_faltantes ?? (cantidad - recibidas)));
-      const precio = parseNumber(item.precio_unitario_sin_iva || 0);
       const estadoItem = normalizeEstado(item.estado_recepcion) || deriveEstadoFromValues(cantidad, recibidas);
+      const valores = computeValores(item, cantidad, recibidas, faltantes);
 
       totalUnidades += cantidad;
       totalRecibidas += recibidas;
       totalFaltantes += faltantes;
 
-      // valor total guardado si existe, si no calcular
-      const vTotal = parseNumber(item.valor_total_compra) || (precio * cantidad);
-      valorTotal += vTotal;
-
-      valorRecibido += (precio * recibidas);
-      valorFaltante += (precio * faltantes);
+      valorTotal += valores.total;
+      valorRecibido += valores.valorRecibido;
+      valorFaltante += valores.valorFaltante;
       if (estadoItem === "completa") totalOrdenesCompletas += 1;
       if (estadoItem === "pendiente") totalOrdenesPendientes += 1;
     });
@@ -335,9 +357,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const recibidasRaw = Math.max(0, parseNumber(item.unidades_recibidas || 0));
         const recibidas = cantidad > 0 ? Math.min(recibidasRaw, cantidad) : recibidasRaw;
         const faltantes = Math.max(0, parseNumber(item.unidades_faltantes ?? (cantidad - recibidas)));
-        const precio = parseNumber(item.precio_unitario_sin_iva || 0);
         const estado = normalizeEstado(item.estado_recepcion) || deriveEstadoFromValues(cantidad, recibidas);
-        return { item, cantidad, recibidas, faltantes, precio, estado };
+        const valores = computeValores(item, cantidad, recibidas, faltantes);
+        return { item, cantidad, recibidas, faltantes, valores, estado };
       })
       .filter(r => (r.estado === "parcial" && r.recibidas > 0 && r.faltantes > 0));
 
@@ -349,7 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const rowsHtml = filas.map(r => {
       const fecha = normalizeDateForFilter(r.item.fecha_compra) || "";
-      const valorF = r.precio * r.faltantes;
+      const valorF = r.valores.valorFaltante;
       return `<tr>
         <td>${escapeHtml(fecha)}</td>
         <td>${escapeHtml(r.item.oc_coltrade || "")}</td>
@@ -371,9 +393,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const recibidasRaw = Math.max(0, parseNumber(item.unidades_recibidas || 0));
     const recibidas = cantidad > 0 ? Math.min(recibidasRaw, cantidad) : recibidasRaw;
     const faltantes = Math.max(0, parseNumber(item.unidades_faltantes ?? (cantidad - recibidas)));
-    const precio = parseNumber(item.precio_unitario_sin_iva || 0);
     const estado = normalizeEstado(item.estado_recepcion) || deriveEstadoFromValues(cantidad, recibidas);
-    return { item, cantidad, recibidas, faltantes, precio, estado };
+    const valores = computeValores(item, cantidad, recibidas, faltantes);
+    return { item, cantidad, recibidas, faltantes, valores, estado };
   }
 
   function renderRecibidasTable(data) {
@@ -391,7 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const rowsHtml = filas.map(r => {
       const fecha = normalizeDateForFilter(r.item.fecha_compra) || "";
-      const valorRec = r.precio * r.recibidas;
+      const valorRec = r.valores.valorRecibido;
       return `<tr>
         <td>${escapeHtml(fecha)}</td>
         <td>${escapeHtml(r.item.oc_coltrade || "")}</td>
@@ -423,7 +445,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const rowsHtml = filas.map(r => {
       const fecha = normalizeDateForFilter(r.item.fecha_compra) || "";
-      const valorPend = r.precio * r.faltantes;
+      const valorPend = r.valores.valorFaltante;
       return `<tr>
         <td>${escapeHtml(fecha)}</td>
         <td>${escapeHtml(r.item.oc_coltrade || "")}</td>

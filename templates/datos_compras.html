@@ -52,12 +52,7 @@
         </div>
 
         <div class="field">
-          <label for="codigo">Codigo</label>
-          <input id="codigo" type="text">
-        </div>
-
-        <div class="field">
-          <label for="nombre">Nombre</label>
+          <label for="nombre">Nombre facturación</label>
           <input id="nombre" type="text">
         </div>
 
@@ -97,8 +92,23 @@
         </div>
 
         <div class="field">
-          <label for="valor_total_compra">Valor total compra</label>
+          <label for="valor_flete">Flete (valor)</label>
+          <input id="valor_flete" type="number" step="0.01" min="0">
+        </div>
+
+        <div class="field">
+          <label for="iva_total">IVA total</label>
+          <input id="iva_total" type="number" readonly>
+        </div>
+
+        <div class="field">
+          <label for="valor_total_compra">Valor total (sin IVA)</label>
           <input id="valor_total_compra" type="number" readonly>
+        </div>
+
+        <div class="field">
+          <label for="valor_total_con_iva">Valor total con IVA</label>
+          <input id="valor_total_con_iva" type="number" readonly>
         </div>
 
         <div class="field">
@@ -108,7 +118,12 @@
 
         <div class="field">
           <label for="tipo_compra">Tipo compra</label>
-          <input id="tipo_compra" type="text">
+          <select id="tipo_compra">
+            <option value="">Selecciona...</option>
+            <option value="en tienda">en tienda</option>
+            <option value="link de pago">link de pago</option>
+            <option value=".com">.com</option>
+          </select>
         </div>
 
         <div class="field">
@@ -128,22 +143,31 @@
 
         <div class="field">
           <label for="estado_compra">Estado compra</label>
-          <input id="estado_compra" type="text">
+          <select id="estado_compra">
+            <option value="">Selecciona...</option>
+            <option value="comprado">comprado</option>
+            <option value="cancelado">cancelado</option>
+            <option value="refacturado">refacturado</option>
+          </select>
         </div>
 
         <div class="field">
           <label for="tipo_entrega">Tipo de entrega</label>
-          <input id="tipo_entrega" type="text">
+          <select id="tipo_entrega">
+            <option value="">Selecciona...</option>
+            <option value="recoleccion">recolección</option>
+            <option value="despacho">despacho</option>
+          </select>
         </div>
 
         <div class="field">
-          <label for="fecha_llegada_nodo">Fecha llegada nodo</label>
-          <input id="fecha_llegada_nodo" type="date">
+          <label for="direccion_recoleccion">Direccion de recoleccion</label>
+          <input id="direccion_recoleccion" type="text">
         </div>
 
         <div class="field">
-          <label for="fecha_confirmacion_recoleccion">Fecha confirmacion recoleccion</label>
-          <input id="fecha_confirmacion_recoleccion" type="date">
+          <label for="ciudad_recoleccion">Ciudad de recoleccion</label>
+          <input id="ciudad_recoleccion" type="text">
         </div>
 
         <div class="field">
@@ -187,7 +211,7 @@
 <div class="filtros-bar">
   <div class="filtro-item">
     <label for="filter-search">Buscar</label>
-    <input id="filter-search" type="search" placeholder="buscar por nombre, código, descripción, proveedor...">
+    <input id="filter-search" type="search" placeholder="buscar por nombre facturacion, descripcion, proveedor...">
   </div>
 
   <div class="filtro-item">
@@ -241,8 +265,7 @@
           <th>ID</th>
           <th>Fecha compra</th>
           <th>Responsable</th>
-          <th>Codigo</th>
-          <th>Nombre</th>
+          <th>Nombre facturación</th>
           <th>Tipo ID</th>
           <th>Identificacion</th>
           <th>Tipo empresa</th>
@@ -250,7 +273,10 @@
           <th>Precio sin IVA</th>
           <th>Precio con IVA</th>
           <th>Cantidad comprada</th>
-          <th>Valor total</th>
+          <th>Flete</th>
+          <th>IVA total</th>
+          <th>Valor total (sin IVA)</th>
+          <th>Valor total con IVA</th>
           <th>Descripcion</th>
           <th>Tipo compra</th>
           <th>Pedido proveedor</th>
@@ -258,8 +284,8 @@
           <th>OC COLTRADE</th>
           <th>Estado compra</th>
           <th>Tipo entrega</th>
-          <th>Fecha llegada nodo</th>
-          <th>Fecha confirmacion recoleccion</th>
+          <th>Direccion recoleccion</th>
+          <th>Ciudad recoleccion</th>
           <th>Proveedor</th>
           <th>Tienda compra</th>
           <th>Palabra clave Meli</th>

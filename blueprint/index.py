@@ -5,16 +5,16 @@ import io
 from datetime import datetime, date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, jsonify
 import pandas as pd
+from blueprint.storage import data_file, get_data_dir, write_json_atomic
 
 index_bp = Blueprint('inicio', __name__, url_prefix='/inicio')
 
-# Rutas relativas (resueltas a partir de la ubicación de este archivo)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))         # .../blueprint
-DATA_DIR = os.path.normpath(os.path.join(BASE_DIR, "..", "data"))  # ../data
-JSON_PATH = os.path.normpath(os.path.join(DATA_DIR, "mercadolibre.json"))  # ../data/mercadolibre.json
-TEMPLATE_XLSX = os.path.normpath(os.path.join(DATA_DIR, "DataMercadoLibre.xlsx"))  # ../data/DataMercadoLibre.xlsx
-COMPRAS_PATH = os.path.normpath(os.path.join(DATA_DIR, "datoscompras.json"))
-RECEPCIONES_PATH = os.path.normpath(os.path.join(DATA_DIR, "recepciones_compras.json"))
+# Datos persistentes (fuera del repo por defecto, configurable con APP_DATA_DIR)
+DATA_DIR = get_data_dir()
+JSON_PATH = data_file("mercadolibre.json")
+TEMPLATE_XLSX = data_file("DataMercadoLibre.xlsx")
+COMPRAS_PATH = data_file("datoscompras.json")
+RECEPCIONES_PATH = data_file("recepciones_compras.json")
 
 # Asegurar que la carpeta existe
 os.makedirs(os.path.dirname(JSON_PATH), exist_ok=True)
@@ -137,6 +137,34 @@ def _to_int(value, default=0):
         except Exception:
             return default
 
+def _to_float(value, default=0.0):
+    try:
+        if value is None or value == "":
+            return default
+        return float(value)
+    except Exception:
+        return default
+
+def _calcular_totales_compra(compra):
+    if not isinstance(compra, dict):
+        return compra
+    precio_sin = _to_float(compra.get("precio_unitario_sin_iva", 0), 0.0)
+    precio_con = _to_float(compra.get("precio_unitario_con_iva", 0), 0.0)
+    cantidad = max(0, _to_int(compra.get("cantidad_comprada", 0), 0))
+    flete = _to_float(compra.get("valor_flete", 0), 0.0)
+
+    precio_base = precio_con if precio_con > 0 else precio_sin
+    iva_total = max(0.0, (precio_con - precio_sin) * cantidad)
+    valor_total = (precio_base * cantidad) + flete
+
+    compra["precio_unitario_sin_iva"] = precio_sin
+    compra["precio_unitario_con_iva"] = precio_con
+    compra["cantidad_comprada"] = cantidad
+    compra["valor_flete"] = flete
+    compra["iva_total"] = iva_total
+    compra["valor_total_compra"] = valor_total
+    return compra
+
 def _derive_estado_recepcion(cantidad, recibidas):
     if cantidad > 0:
         if recibidas >= cantidad:
@@ -166,6 +194,7 @@ def resumen_compras_api():
         if not isinstance(compra, dict):
             continue
 
+        compra = _calcular_totales_compra(dict(compra))
         id_compra = compra.get("id")
         cantidad = max(0, _to_int(compra.get("cantidad_comprada", 0), 0))
 
@@ -255,7 +284,7 @@ def index():
     filtered_count = len(records_with_index) if (date_from or date_to) else 0
     display_list = records_with_index[:500]  # limitar a 500 para no cargar demasiado
 
-    relative_path_display = os.path.join("data", os.path.basename(JSON_PATH))
+    relative_path_display = JSON_PATH
     return render_template(
         'index.html',
         path=relative_path_display,
@@ -404,8 +433,7 @@ def import_excel():
 
     existing.extend(records)
     try:
-        with open(JSON_PATH, "w", encoding="utf-8") as f:
-            json.dump(existing, f, indent=4, ensure_ascii=False)
+        write_json_atomic(JSON_PATH, existing, indent=4)
     except Exception as e:
         flash(f"Error al guardar JSON: {e}", "danger")
         return redirect(url_for('inicio.index'))
@@ -433,13 +461,10 @@ def download_template():
 def delete_all():
     try:
         if os.path.exists(JSON_PATH):
-            with open(JSON_PATH, "w", encoding="utf-8") as f:
-                json.dump([], f, indent=4, ensure_ascii=False)
+            write_json_atomic(JSON_PATH, [], indent=4)
             flash("Registros eliminados correctamente ✅", "success")
         else:
-            os.makedirs(os.path.dirname(JSON_PATH), exist_ok=True)
-            with open(JSON_PATH, "w", encoding="utf-8") as f:
-                json.dump([], f, indent=4, ensure_ascii=False)
+            write_json_atomic(JSON_PATH, [], indent=4)
             flash("Archivo JSON creado vacío (no había registros antes).", "info")
     except Exception as e:
         flash(f"Error al eliminar registros: {e}", "danger")
@@ -500,8 +525,7 @@ def delete_filtered():
         remaining.append(rec)
 
     try:
-        with open(JSON_PATH, "w", encoding="utf-8") as f:
-            json.dump(remaining, f, indent=4, ensure_ascii=False)
+        write_json_atomic(JSON_PATH, remaining, indent=4)
     except Exception as e:
         flash(f"Error al escribir JSON: {e}", "danger")
         return redirect(url_for('inicio.index'))
@@ -537,8 +561,7 @@ def delete_single(idx):
 
     try:
         removed = data.pop(idx)
-        with open(JSON_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        write_json_atomic(JSON_PATH, data, indent=4)
         title = removed.get("title") if isinstance(removed, dict) else None
         flash(f"Registro eliminado: {title or f'Índice {idx}'}", "success")
     except Exception as e:

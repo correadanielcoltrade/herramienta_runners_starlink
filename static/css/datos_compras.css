@@ -570,9 +570,9 @@ td[class*="valor"] {
   display: none !important;
 }
 
-/* Texto mono para IDs o códigos */
-td:nth-child(4), /* código */
-td:nth-child(7) /* identificación */ {
+/* Texto mono para IDs/identificación */
+td:nth-child(1), /* ID */
+td:nth-child(6) /* identificación */ {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
 }

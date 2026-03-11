@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderTable(lastCompras, lastRecepcionesDict);
     } catch (err) {
       console.error("Error cargando datos recepciones:", err);
-      if (tabla) tabla.innerHTML = `<tr><td colspan="16">Error al cargar datos: ${escapeHtml(err.message || String(err))}</td></tr>`;
+      if (tabla) tabla.innerHTML = `<tr><td colspan="15">Error al cargar datos: ${escapeHtml(err.message || String(err))}</td></tr>`;
     }
   }
 
@@ -169,7 +169,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const cantidad_compra = Number(item.cantidad_compra ?? item.cantidad_comprada ?? 0);
 
       // valores para inputs (normalizados)
-      const fecha_llegada_val = normalizeDateForInput(recep.fecha_llegada);
       const rc_odoo_val = (recep.rc_odoo === true || String(recep.rc_odoo).toLowerCase() === "si") ? "Si" : (String(recep.rc_odoo) === "No" ? "No" : (recep.rc_odoo || "No"));
       const fecha_recibo_odoo_val = normalizeDateForInput(recep.fecha_recibo_odoo || recep.fecha_recibo);
       const metodo_entrega_val = recep.metodo_entrega || "";
@@ -192,7 +191,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <td class="cell-proveedor"><div class="readonly">${escapeHtml(proveedor)}</div></td>
         <td class="cell-cantidad"><div class="readonly">${cantidad_compra}</div></td>
 
-        <td class="cell-fecha"><input type="date" id="fecha_llegada-${idCompra}" value="${escapeAttr(fecha_llegada_val)}"></td>
         <td class="cell-rc">
           <select id="rc_odoo-${idCompra}">
             <option value="No"${rc_odoo_val === "No" ? " selected" : ""}>No</option>
@@ -243,7 +241,6 @@ document.addEventListener("DOMContentLoaded", () => {
             btnGuardar.textContent = "Guardando...";
 
             const rc_odoo_val_now = document.getElementById(`rc_odoo-${idCompra}`)?.value || "No";
-            const fecha_llegada_now = document.getElementById(`fecha_llegada-${idCompra}`)?.value || "";
             const fecha_recibo_odoo_now = document.getElementById(`fecha_recibo_odoo-${idCompra}`)?.value || "";
             const metodo_entrega_now = document.getElementById(`metodo_entrega-${idCompra}`)?.value || "";
             const unidades_recibidas_now = Number(document.getElementById(`unidades_recibidas-${idCompra}`)?.value || 0);
@@ -261,7 +258,6 @@ document.addEventListener("DOMContentLoaded", () => {
               factura_proveedor: factura_proveedor,
               proveedor: proveedor,
               rc_odoo: rc_odoo_val_now,
-              fecha_llegada: fecha_llegada_now,
               fecha_recibo_odoo: fecha_recibo_odoo_now,
               metodo_entrega: metodo_entrega_now,
               cantidad_compra: cantidad_compra_from_dataset,
@@ -291,9 +287,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (saved && saved.id_compra) {
-              if (document.getElementById(`fecha_llegada-${idCompra}`)) {
-                document.getElementById(`fecha_llegada-${idCompra}`).value = normalizeDateForInput(saved.fecha_llegada);
-              }
               if (document.getElementById(`fecha_recibo_odoo-${idCompra}`)) {
                 document.getElementById(`fecha_recibo_odoo-${idCompra}`).value = normalizeDateForInput(saved.fecha_recibo_odoo || saved.fecha_recibo);
               }

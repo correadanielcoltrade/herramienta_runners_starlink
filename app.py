@@ -3,20 +3,20 @@ import threading
 import webbrowser
 import jwt
 
-from flask import Flask, redirect, request, jsonify
 from dotenv import load_dotenv
+
+# =========================
+# Cargar variables de entorno (antes de importar blueprints)
+# =========================
+load_dotenv()
+
+from flask import Flask, redirect, request, jsonify
 from blueprint.index import index_bp
 from blueprint.login import login_bp
 from blueprint.datos_compras import datos_compras_bp
 from blueprint.recepciones_compras import recepciones_bp
 from blueprint.admin_panel import admin_panel_bp
-
-
-
-# =========================
-# Cargar variables de entorno
-# =========================
-load_dotenv()
+from blueprint.storage import get_data_dir
 
 # =========================
 # Configuracion de rutas
@@ -30,6 +30,7 @@ STATIC_DIR = os.path.join(BASE_DIR, 'static')
 # =========================
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY') or 'dev-key-solo-para-desarrollo'
+app.config['DATA_DIR'] = get_data_dir()
 
 # =========================
 # Registrar blueprints
@@ -199,6 +200,7 @@ if __name__ == '__main__':
 
     # Obligar login en cada reinicio
     app.config['SESSION_PERMANENT'] = False
+    print(f"[DATA] Carpeta persistente: {app.config.get('DATA_DIR')}")
 
     if (
         os.environ.get("FLASK_ENV") != "production"

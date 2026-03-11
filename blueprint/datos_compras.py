@@ -6,13 +6,12 @@ from datetime import datetime, date
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from flask import send_file
+from blueprint.storage import data_file, write_json_atomic
 
 datos_compras_bp = Blueprint('datos_compras', __name__, url_prefix='/datos-compras')
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.normpath(os.path.join(BASE_DIR, "..", "data"))
-COMPRAS_FILE = os.path.join(DATA_DIR, "datoscompras.json")
-RECEPCIONES_FILE = os.path.join(DATA_DIR, "recepciones_compras.json")
+COMPRAS_FILE = data_file("datoscompras.json")
+RECEPCIONES_FILE = data_file("recepciones_compras.json")
 
 def _read_json(path):
     if not os.path.exists(path):
@@ -21,9 +20,7 @@ def _read_json(path):
         return json.load(f)
 
 def _write_json(path, data):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    write_json_atomic(path, data, indent=4)
 
 def _to_int(value, default=0):
     try:
@@ -44,6 +41,32 @@ def _to_float(value, default=0.0):
     except Exception:
         return default
 
+def _remove_obsolete_fields(data):
+    if not isinstance(data, dict):
+        return data
+    for field in ("codigo", "fecha_llegada_nodo", "fecha_confirmacion_recoleccion"):
+        data.pop(field, None)
+    return data
+
+def _calcular_totales(compra):
+    precio_sin_iva = _to_float(compra.get("precio_unitario_sin_iva", 0), 0.0)
+    precio_con_iva = _to_float(compra.get("precio_unitario_con_iva", 0), 0.0)
+    cantidad = max(0, _to_int(compra.get("cantidad_comprada", 0), 0))
+    valor_flete = _to_float(compra.get("valor_flete", 0), 0.0)
+
+    iva_total = max(0.0, (precio_con_iva - precio_sin_iva) * cantidad)
+    valor_total_sin_iva = (precio_sin_iva * cantidad) + valor_flete
+    valor_total_con_iva = (precio_con_iva * cantidad) + valor_flete
+
+    compra["precio_unitario_sin_iva"] = precio_sin_iva
+    compra["precio_unitario_con_iva"] = precio_con_iva
+    compra["cantidad_comprada"] = cantidad
+    compra["valor_flete"] = valor_flete
+    compra["iva_total"] = iva_total
+    compra["valor_total_compra"] = valor_total_sin_iva
+    compra["valor_total_con_iva"] = valor_total_con_iva
+    return compra
+
 def _normalizar_compra_payload(payload, compra_existente=None):
     """
     Normaliza los campos editables de una compra.
@@ -52,14 +75,21 @@ def _normalizar_compra_payload(payload, compra_existente=None):
     base = dict(compra_existente or {})
 
     text_fields = [
-        "fecha_compra", "responsable_compra", "codigo", "nombre", "tipo_id",
+        "fecha_compra", "responsable_compra", "nombre", "tipo_id",
         "identificacion", "tipo_empresa", "email", "descripcion", "tipo_compra",
         "pedido_proveedor", "factura_proveedor", "oc_coltrade", "estado_compra",
-        "tipo_entrega", "fecha_llegada_nodo", "fecha_confirmacion_recoleccion",
+        "tipo_entrega", "direccion_recoleccion", "ciudad_recoleccion",
         "proveedor", "tienda_compra", "palabra_clave_meli", "recepcion_en_odoo",
         "fecha_recibo", "banco_origen", "observaciones"
     ]
-    numeric_float_fields = ["precio_unitario_sin_iva", "precio_unitario_con_iva", "valor_total_compra"]
+    numeric_float_fields = [
+        "precio_unitario_sin_iva",
+        "precio_unitario_con_iva",
+        "valor_flete",
+        "iva_total",
+        "valor_total_compra",
+        "valor_total_con_iva"
+    ]
     numeric_int_fields = ["cantidad_comprada"]
 
     for k in text_fields:
@@ -75,13 +105,8 @@ def _normalizar_compra_payload(payload, compra_existente=None):
         if k in payload:
             base[k] = _to_int(payload.get(k), 0)
 
-    # si no viene valor_total o viene en cero, recalcular
-    precio = _to_float(base.get("precio_unitario_sin_iva", 0), 0.0)
-    cantidad = _to_int(base.get("cantidad_comprada", 0), 0)
-    valor_total = _to_float(base.get("valor_total_compra", 0), 0.0)
-    if valor_total == 0:
-        base["valor_total_compra"] = precio * cantidad
-
+    _calcular_totales(base)
+    _remove_obsolete_fields(base)
     return base
 
 @datos_compras_bp.route('/')
@@ -101,6 +126,8 @@ def get_compras():
     compras_con_estado = []
 
     for compra in compras:
+        compra = _remove_obsolete_fields(dict(compra))
+        compra = _calcular_totales(compra)
         id_compra = compra.get("id")
         cantidad = max(0, _to_int(compra.get("cantidad_comprada", 0), 0))
         recepcion = recepciones_dict.get(id_compra)
@@ -174,10 +201,8 @@ def crear_compra():
     compras = _read_json(COMPRAS_FILE)
     new_id = max([c.get("id", 0) for c in compras], default=0) + 1
 
-    # calcular valor_total_compra si no viene
-    precio = float(payload.get("precio_unitario_sin_iva", 0))
-    cantidad = int(payload.get("cantidad_comprada", 0))
-    payload["valor_total_compra"] = precio * cantidad
+    payload = _normalizar_compra_payload(_remove_obsolete_fields(dict(payload)), {})
+    cantidad = _to_int(payload.get("cantidad_comprada", 0), 0)
 
     nuevo = {
         "id": new_id,
@@ -273,7 +298,6 @@ def download_template():
     headers = [
         "fecha_compra",
         "responsable_compra",
-        "codigo",
         "nombre",
         "tipo_id",
         "identificacion",
@@ -282,7 +306,10 @@ def download_template():
         "precio_unitario_sin_iva",
         "precio_unitario_con_iva",
         "cantidad_comprada",
+        "valor_flete",
+        "iva_total",
         "valor_total_compra",  # opcional: se calculará si está vacío
+        "valor_total_con_iva",  # opcional: se calculará si está vacío
         "descripcion",
         "tipo_compra",
         "pedido_proveedor",
@@ -290,8 +317,8 @@ def download_template():
         "oc_coltrade",
         "estado_compra",
         "tipo_entrega",
-        "fecha_llegada_nodo",
-        "fecha_confirmacion_recoleccion",
+        "direccion_recoleccion",
+        "ciudad_recoleccion",
         "proveedor",
         "tienda_compra",
         "palabra_clave_meli",
@@ -314,8 +341,7 @@ def download_template():
     example = [
         datetime.now().date().isoformat(),
         "Nombre Ejemplo",
-        "ABC123",
-        "Nombre cliente",
+        "Nombre facturacion ejemplo",
         "CC",
         "12345678",
         "Distribuidor",
@@ -323,16 +349,19 @@ def download_template():
         1000,
         1190,
         10,
+        15000,
+        "",
         "",  # valor_total_compra vacío -> se calculará
+        "",  # valor_total_con_iva vacío -> se calculará
         "Descripción ejemplo",
-        "Normal",
+        "en tienda",
         "PO-111",
         "FAC-111",
         "OC-111",
-        "Pendiente",
-        "Domicilio",
-        "",
-        "",
+        "comprado",
+        "recoleccion",
+        "Cra 10 # 20 - 30",
+        "Bogota",
         "Proveedor A",
         "Tienda 1",
         "meli-key",
@@ -384,13 +413,13 @@ def import_from_excel():
 
     # Campos permitidos / esperados (se mapearán si están)
     allowed = set([
-        "fecha_compra", "responsable_compra", "codigo", "nombre", "tipo_id",
+        "fecha_compra", "responsable_compra", "nombre", "tipo_id",
         "identificacion", "tipo_empresa", "email",
         "precio_unitario_sin_iva", "precio_unitario_con_iva",
-        "cantidad_comprada", "valor_total_compra",
+        "cantidad_comprada", "valor_flete", "iva_total", "valor_total_compra", "valor_total_con_iva",
         "descripcion", "tipo_compra", "pedido_proveedor", "factura_proveedor",
         "oc_coltrade", "estado_compra", "tipo_entrega",
-        "fecha_llegada_nodo", "fecha_confirmacion_recoleccion",
+        "direccion_recoleccion", "ciudad_recoleccion",
         "proveedor", "tienda_compra", "palabra_clave_meli",
         "recepcion_en_odoo", "fecha_recibo", "banco_origen", "observaciones"
     ])
@@ -424,7 +453,9 @@ def import_from_excel():
         # validaciones simples
         try:
             cantidad = row_vals.get("cantidad_comprada", 0) or 0
-            precio = row_vals.get("precio_unitario_sin_iva", 0) or 0
+            precio_sin_iva = row_vals.get("precio_unitario_sin_iva", 0) or 0
+            precio_con_iva = row_vals.get("precio_unitario_con_iva", 0) or 0
+            valor_flete = row_vals.get("valor_flete", 0) or 0
 
             # si la celda viene como fecha (openpyxl date), convertir a ISO string
             fc = row_vals.get("fecha_compra")
@@ -448,31 +479,34 @@ def import_from_excel():
                     cantidad_num = 0
 
             try:
-                precio_num = float(precio or 0)
+                precio_sin_iva_num = float(precio_sin_iva or 0)
             except Exception:
-                precio_num = 0.0
+                precio_sin_iva_num = 0.0
 
             # calcular valor_total_compra si está vacío o cero
-            valor_total = row_vals.get("valor_total_compra") or 0
             try:
-                valor_total_num = float(valor_total)
+                precio_con_iva_num = float(precio_con_iva or 0)
             except Exception:
-                valor_total_num = 0.0
+                precio_con_iva_num = 0.0
 
-            if not valor_total_num or valor_total_num == 0:
-                valor_total_num = precio_num * cantidad_num
+            try:
+                valor_flete_num = float(valor_flete or 0)
+            except Exception:
+                valor_flete_num = 0.0
 
             nuevo = {
                 "id": next_id,
                 **{k: (v if v is not None else "") for k, v in row_vals.items()},
-                "precio_unitario_sin_iva": precio_num,
+                "precio_unitario_sin_iva": precio_sin_iva_num,
+                "precio_unitario_con_iva": precio_con_iva_num,
                 "cantidad_comprada": cantidad_num,
-                "valor_total_compra": valor_total_num,
+                "valor_flete": valor_flete_num,
                 # campos por defecto de recepcion
                 "unidades_recibidas": 0,
                 "unidades_faltantes": cantidad_num,
                 "estado_recepcion": "Pendiente"
             }
+            _calcular_totales(nuevo)
 
             compras.append(nuevo)
             new_rows.append({"row": row_idx, "id": next_id})
@@ -509,7 +543,6 @@ def export_to_excel():
         "id",
         "fecha_compra",
         "responsable_compra",
-        "codigo",
         "nombre",
         "tipo_id",
         "identificacion",
@@ -518,7 +551,10 @@ def export_to_excel():
         "precio_unitario_sin_iva",
         "precio_unitario_con_iva",
         "cantidad_comprada",
+        "valor_flete",
+        "iva_total",
         "valor_total_compra",
+        "valor_total_con_iva",
         "descripcion",
         "tipo_compra",
         "pedido_proveedor",
@@ -526,8 +562,8 @@ def export_to_excel():
         "oc_coltrade",
         "estado_compra",
         "tipo_entrega",
-        "fecha_llegada_nodo",
-        "fecha_confirmacion_recoleccion",
+        "direccion_recoleccion",
+        "ciudad_recoleccion",
         "proveedor",
         "tienda_compra",
         "palabra_clave_meli",
@@ -551,8 +587,9 @@ def export_to_excel():
 
     # filas
     for ri, c in enumerate(compras, start=2):
+        row_obj = _calcular_totales(_remove_obsolete_fields(dict(c)))
         for ci, h in enumerate(headers, start=1):
-            val = c.get(h, "")
+            val = row_obj.get(h, "")
             # asegurarse que las fechas sean strings legibles (ISO)
             if isinstance(val, (datetime, date)):
                 val = val.isoformat()
@@ -618,7 +655,6 @@ def export_faltantes_excel():
         "id",
         "fecha_compra",
         "responsable_compra",
-        "codigo",
         "nombre",
         "tipo_id",
         "identificacion",
@@ -627,7 +663,10 @@ def export_faltantes_excel():
         "precio_unitario_sin_iva",
         "precio_unitario_con_iva",
         "cantidad_comprada",
+        "valor_flete",
+        "iva_total",
         "valor_total_compra",
+        "valor_total_con_iva",
         "descripcion",
         "tipo_compra",
         "pedido_proveedor",
@@ -635,8 +674,8 @@ def export_faltantes_excel():
         "oc_coltrade",
         "estado_compra",
         "tipo_entrega",
-        "fecha_llegada_nodo",
-        "fecha_confirmacion_recoleccion",
+        "direccion_recoleccion",
+        "ciudad_recoleccion",
         "proveedor",
         "tienda_compra",
         "palabra_clave_meli",
@@ -665,7 +704,7 @@ def export_faltantes_excel():
         unidades_recibidas = recep.get("unidades_recibidas") if recep.get("unidades_recibidas") is not None else c.get("unidades_recibidas", "")
         unidades_faltantes = recep.get("unidades_faltantes") if recep.get("unidades_faltantes") is not None else c.get("unidades_faltantes", "")
         row_obj = {
-            **c,
+            **_calcular_totales(_remove_obsolete_fields(dict(c))),
             "unidades_recibidas": unidades_recibidas,
             "unidades_faltantes": unidades_faltantes
         }

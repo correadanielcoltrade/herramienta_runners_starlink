@@ -147,7 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const EDITABLE_FIELDS = [
     "fecha_compra",
     "responsable_compra",
-    "codigo",
     "nombre",
     "tipo_id",
     "identificacion",
@@ -156,7 +155,10 @@ document.addEventListener("DOMContentLoaded", () => {
     "precio_unitario_sin_iva",
     "precio_unitario_con_iva",
     "cantidad_comprada",
+    "valor_flete",
+    "iva_total",
     "valor_total_compra",
+    "valor_total_con_iva",
     "descripcion",
     "tipo_compra",
     "pedido_proveedor",
@@ -164,8 +166,8 @@ document.addEventListener("DOMContentLoaded", () => {
     "oc_coltrade",
     "estado_compra",
     "tipo_entrega",
-    "fecha_llegada_nodo",
-    "fecha_confirmacion_recoleccion",
+    "direccion_recoleccion",
+    "ciudad_recoleccion",
     "proveedor",
     "tienda_compra",
     "palabra_clave_meli",
@@ -254,24 +256,42 @@ document.addEventListener("DOMContentLoaded", () => {
   const columnasList = $("columnas-list");
   const COLUMN_PREF_KEY = "datos_compras_visible_columns_v1";
   let columnConfig = [];
+  const getErrorColspan = () => {
+    const thCount = tablaHeaderRow ? tablaHeaderRow.querySelectorAll("th").length : 0;
+    return thCount > 0 ? thCount : 36;
+  };
 
   // -----------------------
-  // Auto-calculo valor_total_compra
+  // Auto-calculo: IVA, valor total sin IVA y valor total con IVA
   // -----------------------
-  const priceId = "precio_unitario_sin_iva";
+  const priceSinId = "precio_unitario_sin_iva";
+  const priceConId = "precio_unitario_con_iva";
   const qtyId = "cantidad_comprada";
+  const fleteId = "valor_flete";
+  const ivaTotalId = "iva_total";
   const valorTotalId = "valor_total_compra";
+  const valorTotalConIvaId = "valor_total_con_iva";
 
   function calcularValorTotal() {
-    const precio = getNumber(priceId, 0);
+    const precioSin = getNumber(priceSinId, 0);
+    const precioCon = getNumber(priceConId, 0);
     const cantidad = getNumber(qtyId, 0);
-    const total = precio * cantidad;
-    setValue(valorTotalId, isFinite(total) ? total.toFixed(2) : "");
+    const flete = getNumber(fleteId, 0);
+    const ivaTotal = (precioCon - precioSin) * cantidad;
+    const totalSinIva = (precioSin * cantidad) + flete;
+    const totalConIva = (precioCon * cantidad) + flete;
+    setValue(ivaTotalId, isFinite(ivaTotal) ? ivaTotal.toFixed(2) : "");
+    setValue(valorTotalId, isFinite(totalSinIva) ? totalSinIva.toFixed(2) : "");
+    setValue(valorTotalConIvaId, isFinite(totalConIva) ? totalConIva.toFixed(2) : "");
   }
-  const priceEl = $(priceId);
+  const priceSinEl = $(priceSinId);
+  const priceConEl = $(priceConId);
   const qtyEl = $(qtyId);
-  if (priceEl) priceEl.addEventListener("input", calcularValorTotal);
+  const fleteEl = $(fleteId);
+  if (priceSinEl) priceSinEl.addEventListener("input", calcularValorTotal);
+  if (priceConEl) priceConEl.addEventListener("input", calcularValorTotal);
   if (qtyEl) qtyEl.addEventListener("input", calcularValorTotal);
+  if (fleteEl) fleteEl.addEventListener("input", calcularValorTotal);
 
   // -----------------------
   // Columnas visibles (show/hide)
@@ -421,7 +441,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const id = safe(item.id, "");
       const fecha_compra = safe(item.fecha_compra, "");
       const responsable_compra = safe(item.responsable_compra, "");
-      const codigo = safe(item.codigo, "");
       const nombre = safe(item.nombre, "");
       const tipo_id = safe(item.tipo_id, "");
       const identificacion = safe(item.identificacion, "");
@@ -430,8 +449,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const precio_unitario_sin_iva = safe(item.precio_unitario_sin_iva, "");
       const precio_unitario_con_iva = safe(item.precio_unitario_con_iva, "");
       const cantidad_comprada = safe(item.cantidad_comprada, "");
+      const valor_flete = safe(item.valor_flete, "");
+      const iva_total = safe(item.iva_total,
+        ((Number(precio_unitario_con_iva) - Number(precio_unitario_sin_iva)) * Number(cantidad_comprada))
+      );
       const valor_total_compra = safe(item.valor_total_compra,
-        (precio_unitario_sin_iva && cantidad_comprada) ? (Number(precio_unitario_sin_iva) * Number(cantidad_comprada)) : ""
+        ((Number(precio_unitario_sin_iva) * Number(cantidad_comprada)) + Number(valor_flete || 0))
+      );
+      const valor_total_con_iva = safe(item.valor_total_con_iva,
+        ((Number(precio_unitario_con_iva) * Number(cantidad_comprada)) + Number(valor_flete || 0))
       );
       const descripcion = safe(item.descripcion, "");
       const tipo_compra = safe(item.tipo_compra, "");
@@ -440,8 +466,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const oc_coltrade = safe(item.oc_coltrade, "");
       const estado_compra = safe(item.estado_compra, "");
       const tipo_entrega = safe(item.tipo_entrega, "");
-      const fecha_llegada_nodo = safe(item.fecha_llegada_nodo, "");
-      const fecha_confirmacion_recoleccion = safe(item.fecha_confirmacion_recoleccion, "");
+      const direccion_recoleccion = safe(item.direccion_recoleccion, "");
+      const ciudad_recoleccion = safe(item.ciudad_recoleccion, "");
       const proveedor = safe(item.proveedor, "");
       const tienda_compra = safe(item.tienda_compra, "");
       const palabra_clave_meli = safe(item.palabra_clave_meli, "");
@@ -461,7 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const fecha_recibo_recepcion =
-        safe(recep.fecha_recibo_odoo, safe(recep.fecha_recibo, safe(recep.fecha_llegada, "")));
+        safe(recep.fecha_recibo_odoo, safe(recep.fecha_recibo, ""));
       const fecha_recibo_final = normalizeDateForDisplay(fecha_recibo_recepcion || fecha_recibo_from_compras);
       const observaciones_ops = safe(recep.observaciones_ops, observaciones_ops_from_compras);
       const unidades_recibidas = (recep.unidades_recibidas !== undefined && recep.unidades_recibidas !== null)
@@ -477,7 +503,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${id}</td>
         <td>${fecha_compra}</td>
         <td>${responsable_compra}</td>
-        <td>${codigo}</td>
         <td>${nombre}</td>
         <td>${tipo_id}</td>
         <td>${identificacion}</td>
@@ -486,7 +511,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${fmtNumber(precio_unitario_sin_iva)}</td>
         <td>${fmtNumber(precio_unitario_con_iva)}</td>
         <td class="cantidad-pedida">${fmtNumber(cantidad_comprada)}</td>
+        <td>${fmtNumber(valor_flete)}</td>
+        <td>${fmtNumber(iva_total)}</td>
         <td>${fmtNumber(valor_total_compra)}</td>
+        <td>${fmtNumber(valor_total_con_iva)}</td>
         <td>${descripcion}</td>
         <td>${tipo_compra}</td>
         <td>${pedido_proveedor}</td>
@@ -494,8 +522,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${oc_coltrade}</td>
         <td>${estado_compra}</td>
         <td>${tipo_entrega}</td>
-        <td>${fecha_llegada_nodo}</td>
-        <td>${fecha_confirmacion_recoleccion}</td>
+        <td>${direccion_recoleccion}</td>
+        <td>${ciudad_recoleccion}</td>
         <td>${proveedor}</td>
         <td>${tienda_compra}</td>
         <td>${palabra_clave_meli}</td>
@@ -605,9 +633,10 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
           "precio_unitario_sin_iva",
           "precio_unitario_con_iva",
           "cantidad_comprada",
+          "valor_flete",
+          "iva_total",
           "valor_total_compra",
-          "fecha_llegada_nodo",
-          "fecha_confirmacion_recoleccion",
+          "valor_total_con_iva",
           "fecha_recibo",
           "banco_origen",
           "unidades_recibidas",
@@ -696,7 +725,7 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
       });
 
       if (!resCompras.ok) {
-        tablaBody.innerHTML = `<tr><td colspan="34">Error al cargar datos compras (${resCompras.status})</td></tr>`;
+        tablaBody.innerHTML = `<tr><td colspan="${getErrorColspan()}">Error al cargar datos compras (${resCompras.status})</td></tr>`;
         return;
       }
 
@@ -713,7 +742,7 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
 
       const compras = await safeReadJson(resCompras);
       if (!Array.isArray(compras)) {
-        tablaBody.innerHTML = `<tr><td colspan="34">Respuesta invalida del API de compras.</td></tr>`;
+        tablaBody.innerHTML = `<tr><td colspan="${getErrorColspan()}">Respuesta invalida del API de compras.</td></tr>`;
         return;
       }
 
@@ -723,7 +752,7 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
       applyFiltersAndRender();
     } catch (err) {
       console.error("Error en cargarDatos:", err);
-      if (tablaBody) tablaBody.innerHTML = `<tr><td colspan="34">Error al procesar datos</td></tr>`;
+      if (tablaBody) tablaBody.innerHTML = `<tr><td colspan="${getErrorColspan()}">Error al procesar datos</td></tr>`;
     }
   }
 
@@ -753,7 +782,7 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
         if (!Number.isFinite(id)) return;
 
         const item = allCompras.find(x => Number(x.id) === id);
-        const ref = item?.oc_coltrade || item?.pedido_proveedor || item?.codigo || `ID ${id}`;
+        const ref = item?.oc_coltrade || item?.pedido_proveedor || `ID ${id}`;
         const ok = confirm(`Se eliminara el registro ${ref}.\nEsta accion no se puede deshacer.\n\nDeseas continuar?`);
         if (!ok) return;
 
@@ -787,7 +816,6 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
       const payload = {
         fecha_compra: getValue("fecha_compra"),
         responsable_compra: getValue("responsable_compra"),
-        codigo: getValue("codigo"),
         nombre: getValue("nombre"),
         tipo_id: getValue("tipo_id"),
         identificacion: getValue("identificacion"),
@@ -796,7 +824,10 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
         precio_unitario_sin_iva: getNumber("precio_unitario_sin_iva", 0),
         precio_unitario_con_iva: getNumber("precio_unitario_con_iva", 0),
         cantidad_comprada: getNumber("cantidad_comprada", 0),
+        valor_flete: getNumber("valor_flete", 0),
+        iva_total: getNumber("iva_total", 0),
         valor_total_compra: getNumber("valor_total_compra", 0),
+        valor_total_con_iva: getNumber("valor_total_con_iva", 0),
         descripcion: getValue("descripcion"),
         tipo_compra: getValue("tipo_compra"),
         pedido_proveedor: getValue("pedido_proveedor"),
@@ -804,8 +835,8 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
         oc_coltrade: getValue("oc_coltrade"),
         estado_compra: getValue("estado_compra"),
         tipo_entrega: getValue("tipo_entrega"),
-        fecha_llegada_nodo: getValue("fecha_llegada_nodo"),
-        fecha_confirmacion_recoleccion: getValue("fecha_confirmacion_recoleccion"),
+        direccion_recoleccion: getValue("direccion_recoleccion"),
+        ciudad_recoleccion: getValue("ciudad_recoleccion"),
         proveedor: getValue("proveedor"),
         tienda_compra: getValue("tienda_compra"),
         palabra_clave_meli: getValue("palabra_clave_meli"),
@@ -813,7 +844,9 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
         observaciones: getValue("observaciones")
       };
 
-      if (!payload.valor_total_compra || payload.valor_total_compra === 0) payload.valor_total_compra = Number(payload.precio_unitario_sin_iva) * Number(payload.cantidad_comprada);
+      payload.iva_total = (Number(payload.precio_unitario_con_iva) - Number(payload.precio_unitario_sin_iva)) * Number(payload.cantidad_comprada);
+      payload.valor_total_compra = (Number(payload.precio_unitario_sin_iva) * Number(payload.cantidad_comprada)) + Number(payload.valor_flete);
+      payload.valor_total_con_iva = (Number(payload.precio_unitario_con_iva) * Number(payload.cantidad_comprada)) + Number(payload.valor_flete);
 
       try {
         const isEdit = Boolean(currentId);

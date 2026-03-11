@@ -1,13 +1,12 @@
 import os
 import json
 from flask import Blueprint, render_template, request, jsonify
+from blueprint.storage import data_file, write_json_atomic
 
 recepciones_bp = Blueprint('recepciones_compras', __name__, url_prefix='/recepciones')
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.normpath(os.path.join(BASE_DIR, "..", "data"))
-COMPRAS_FILE = os.path.join(DATA_DIR, "datoscompras.json")
-RECEPCIONES_FILE = os.path.join(DATA_DIR, "recepciones_compras.json")
+COMPRAS_FILE = data_file("datoscompras.json")
+RECEPCIONES_FILE = data_file("recepciones_compras.json")
 
 def _read_json(path):
     if not os.path.exists(path):
@@ -16,9 +15,13 @@ def _read_json(path):
         return json.load(f)
 
 def _write_json(path, data):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    write_json_atomic(path, data, indent=4)
+
+def _clean_recepcion_fields(data):
+    if not isinstance(data, dict):
+        return data
+    data.pop("fecha_llegada", None)
+    return data
 
 @recepciones_bp.route('/')
 def page():
@@ -35,7 +38,6 @@ def compras_para_recepcion():
             "id": c.get("id"),
             "fecha_compra": c.get("fecha_compra"),
             "responsable_compra": c.get("responsable_compra"),
-            "codigo": c.get("codigo"),
             "nombre": c.get("nombre"),
             "cliente": c.get("nombre"),
             "descripcion": c.get("descripcion"),
@@ -47,6 +49,9 @@ def compras_para_recepcion():
             "cantidad_compra": c.get("cantidad_comprada"),
             "cantidad_comprada": c.get("cantidad_comprada"),
             "precio_unitario_sin_iva": c.get("precio_unitario_sin_iva"),
+            "precio_unitario_con_iva": c.get("precio_unitario_con_iva"),
+            "valor_flete": c.get("valor_flete"),
+            "iva_total": c.get("iva_total"),
             "valor_total_compra": c.get("valor_total_compra"),
             "estado_recepcion": c.get("estado_recepcion")
         })
@@ -56,7 +61,10 @@ def compras_para_recepcion():
 @recepciones_bp.route('/api', methods=['GET'])
 def get_recepciones():
     recepciones = _read_json(RECEPCIONES_FILE)
-    return jsonify(recepciones)
+    salida = []
+    for r in recepciones:
+        salida.append(_clean_recepcion_fields(dict(r)))
+    return jsonify(salida)
 
 # crear o actualizar recepcion (por id_compra)
 @recepciones_bp.route('/api/guardar', methods=['POST'])
@@ -76,13 +84,13 @@ def guardar_recepcion():
         if r.get("id_compra") == id_compra:
             # actualizar solo los campos editables en recepcion
             r.update({
-                "fecha_llegada": payload.get("fecha_llegada"),
                 "rc_odoo": payload.get("rc_odoo"),
                 "fecha_recibo_odoo": payload.get("fecha_recibo_odoo"),
                 "metodo_entrega": payload.get("metodo_entrega"),
                 "unidades_recibidas": int(payload.get("unidades_recibidas", 0)),
                 "observaciones_ops": payload.get("observaciones_ops", "")
             })
+            _clean_recepcion_fields(r)
             # recalcular faltantes
             cantidad_compra = int(payload.get("cantidad_compra", 0))
             r["unidades_faltantes"] = cantidad_compra - r["unidades_recibidas"]
@@ -96,7 +104,6 @@ def guardar_recepcion():
         recepcion_nueva = {
             "id": nuevo_id,
             "id_compra": id_compra,
-            "fecha_llegada": payload.get("fecha_llegada"),
             "cliente": payload.get("cliente"),
             "producto": payload.get("producto"),
             "oc_coltrade": payload.get("oc_coltrade"),
