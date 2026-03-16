@@ -19,8 +19,15 @@ def get_data_dir() -> str:
     if custom:
         path = os.path.abspath(os.path.expanduser(custom))
     else:
-        base = os.getenv("LOCALAPPDATA") or os.path.expanduser("~")
-        path = os.path.join(base, "runners_starlink_data")
+        # Render: si hay disco persistente montado (comunmente /var/data), usarlo
+        render_hint = os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID")
+        render_candidates = ["/var/data", "/data"] if render_hint else []
+        render_path = next((p for p in render_candidates if os.path.isdir(p)), "")
+        if render_path:
+            path = os.path.join(render_path, "runners_starlink_data")
+        else:
+            base = os.getenv("LOCALAPPDATA") or os.path.expanduser("~")
+            path = os.path.join(base, "runners_starlink_data")
 
     os.makedirs(path, exist_ok=True)
     return os.path.normpath(path)

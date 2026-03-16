@@ -10,6 +10,7 @@ La app ahora usa una carpeta de datos persistente fuera del repo para evitar per
 - Si no se define, usa por defecto:
   - Windows: `%LOCALAPPDATA%\\runners_starlink_data`
   - Otros: `~/runners_starlink_data`
+  - Render (si hay disco montado): `/var/data/runners_starlink_data`
 
 Al iniciar, si faltan archivos en la carpeta persistente, se copian automaticamente desde `./data` una sola vez.
 
