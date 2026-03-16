@@ -24,6 +24,10 @@
   <button id="btn-export-faltantes" class="btn" type="button" style="margin-left:6px;">
     Reporte de Faltantes
   </button>
+  <button id="btn-delete-selected" class="btn danger" type="button" disabled style="margin-left:6px;">
+    Eliminar seleccionados
+  </button>
+  <span id="selected-count" class="selected-count">0 seleccionados</span>
 </div>
 
   <!-- =========================
@@ -262,6 +266,9 @@
     <table>
       <thead>
         <tr>
+          <th>
+            <input id="select-all" type="checkbox" aria-label="Seleccionar todos los registros visibles">
+          </th>
           <th>ID</th>
           <th>Fecha compra</th>
           <th>Responsable</th>

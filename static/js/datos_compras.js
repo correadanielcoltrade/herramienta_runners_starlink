@@ -19,6 +19,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const tablaBody = $("tabla-body");
   const guardarBtn = $("guardar-btn");
   const modalTitle = $("modal-title");
+  const selectAllCheckbox = $("select-all");
+  const btnDeleteSelected = $("btn-delete-selected");
+  const selectedCount = $("selected-count");
 
   function safe(v, d = "") { return (v === undefined || v === null) ? d : v; }
   function fmtNumber(v) {
@@ -50,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // -----------------------
   let allCompras = [];     // original purchases
   let allRecepciones = []; // original receptions
+  const selectedCompraIds = new Set();
   const canReadRecepcionesApi =
     Boolean(document.querySelector('a[href="/recepciones/"]')) ||
     Boolean(document.querySelector('a[href="/admin-panel/"]'));
@@ -261,6 +265,41 @@ document.addEventListener("DOMContentLoaded", () => {
     return thCount > 0 ? thCount : 36;
   };
 
+  function syncSelectedIdsWithData() {
+    const existing = new Set(allCompras.map(c => Number(c.id)).filter(id => Number.isFinite(id)));
+    [...selectedCompraIds].forEach(id => {
+      if (!existing.has(id)) selectedCompraIds.delete(id);
+    });
+  }
+
+  function getVisibleRowCheckboxes() {
+    if (!tablaBody) return [];
+    return Array.from(tablaBody.querySelectorAll("input.row-select"));
+  }
+
+  function updateSelectAllState() {
+    if (!selectAllCheckbox) return;
+    const checkboxes = getVisibleRowCheckboxes();
+    if (!checkboxes.length) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+      return;
+    }
+    const checkedCount = checkboxes.filter(cb => cb.checked).length;
+    selectAllCheckbox.checked = checkedCount === checkboxes.length;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+  }
+
+  function updateSelectedUI() {
+    if (selectedCount) {
+      selectedCount.textContent = `${selectedCompraIds.size} seleccionados`;
+    }
+    if (btnDeleteSelected) {
+      btnDeleteSelected.disabled = selectedCompraIds.size === 0;
+    }
+    updateSelectAllState();
+  }
+
   // -----------------------
   // Auto-calculo: IVA, valor total sin IVA y valor total con IVA
   // -----------------------
@@ -439,6 +478,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     comprasToRender.forEach(item => {
       const id = safe(item.id, "");
+      const numericId = Number(id);
+      const isSelected = Number.isFinite(numericId) && selectedCompraIds.has(numericId);
       const fecha_compra = safe(item.fecha_compra, "");
       const responsable_compra = safe(item.responsable_compra, "");
       const nombre = safe(item.nombre, "");
@@ -500,6 +541,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const row = document.createElement("tr");
       row.innerHTML = `
+        <td class="col-select">
+          <input type="checkbox" class="row-select" data-id="${id}" ${isSelected ? "checked" : ""} aria-label="Seleccionar compra ${id}">
+        </td>
         <td>${id}</td>
         <td>${fecha_compra}</td>
         <td>${responsable_compra}</td>
@@ -571,13 +615,14 @@ if (claseEstado) {
   row.classList.add(claseEstado);
 }
 
-if (tdFalt) tdFalt.title = `Faltantes: ${faltantesNum}`;
-if (tdRec) tdRec.title = `Recibidas: ${recibidasNum}`;
-if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
+      if (tdFalt) tdFalt.title = `Faltantes: ${faltantesNum}`;
+      if (tdRec) tdRec.title = `Recibidas: ${recibidasNum}`;
+      if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
 
     });
 
     applyColumnVisibility();
+    updateSelectAllState();
   }
 
   // -----------------------
@@ -748,8 +793,10 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
 
       allCompras = Array.isArray(compras) ? compras : [];
       allRecepciones = Array.isArray(recepcionesData) ? recepcionesData : [];
+      syncSelectedIdsWithData();
 
       applyFiltersAndRender();
+      updateSelectedUI();
     } catch (err) {
       console.error("Error en cargarDatos:", err);
       if (tablaBody) tablaBody.innerHTML = `<tr><td colspan="${getErrorColspan()}">Error al procesar datos</td></tr>`;
@@ -760,6 +807,16 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
   // Editar / Eliminar (acciones en tabla)
   // -----------------------
   if (tablaBody) {
+    tablaBody.addEventListener("change", (e) => {
+      const checkbox = e.target.closest("input.row-select");
+      if (!checkbox) return;
+      const id = Number(checkbox.dataset.id);
+      if (!Number.isFinite(id)) return;
+      if (checkbox.checked) selectedCompraIds.add(id);
+      else selectedCompraIds.delete(id);
+      updateSelectedUI();
+    });
+
     tablaBody.addEventListener("click", async (e) => {
       const btnEdit = e.target.closest(".btn-edit");
       const btnDelete = e.target.closest(".btn-delete");
@@ -802,6 +859,53 @@ if (tdPedido) tdPedido.title = `Pedido: ${pedidoNum}`;
           console.error("Error eliminando compra:", err);
           alert("Error eliminando registro (revisa consola).");
         }
+      }
+    });
+  }
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener("change", () => {
+      const checked = selectAllCheckbox.checked;
+      const checkboxes = getVisibleRowCheckboxes();
+      checkboxes.forEach(cb => {
+        cb.checked = checked;
+        const id = Number(cb.dataset.id);
+        if (!Number.isFinite(id)) return;
+        if (checked) selectedCompraIds.add(id);
+        else selectedCompraIds.delete(id);
+      });
+      updateSelectedUI();
+    });
+  }
+
+  if (btnDeleteSelected) {
+    btnDeleteSelected.addEventListener("click", async (e) => {
+      e.preventDefault();
+      if (selectedCompraIds.size === 0) return;
+
+      const ids = Array.from(selectedCompraIds);
+      const ok = confirm(`Se eliminaran ${ids.length} registros seleccionados.\nEsta accion no se puede deshacer.\n\nDeseas continuar?`);
+      if (!ok) return;
+
+      try {
+        const res = await fetch("/datos-compras/api/batch-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>"");
+          alert("Error eliminando seleccionados: " + res.status + "\n" + txt);
+          return;
+        }
+
+        selectedCompraIds.clear();
+        await cargarDatos();
+        alert("Registros eliminados correctamente.");
+      } catch (err) {
+        console.error("Error eliminando seleccionados:", err);
+        alert("Error eliminando seleccionados (revisa consola).");
       }
     });
   }

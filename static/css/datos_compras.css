@@ -118,6 +118,32 @@
   box-shadow: 0 4px 8px rgba(10,102,194,0.3);
 }
 
+.btn.danger {
+  background-color: var(--danger-text);
+  border-color: var(--danger-text);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(155,30,30,0.2);
+}
+
+.btn.danger:hover {
+  background-color: #7f1515;
+  border-color: #7f1515;
+  box-shadow: 0 4px 8px rgba(155,30,30,0.3);
+}
+
+.btn.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.selected-count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding-left: 0.25rem;
+}
+
 .btn:active {
   transform: translateY(0);
   box-shadow: var(--shadow-sm);
@@ -413,7 +439,7 @@
 .tabla-section table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 2800px; /* Ajusta según la cantidad de columnas */
+  min-width: 2900px; /* Ajusta según la cantidad de columnas */
   font-size: 0.8125rem;
   table-layout: auto;
   white-space: nowrap;
@@ -453,6 +479,19 @@
 .tabla-section th:last-child,
 .tabla-section td:last-child {
   min-width: 170px;
+}
+
+
+.tabla-section th:first-child,
+.tabla-section td:first-child {
+  min-width: 50px;
+  width: 50px;
+  text-align: center;
+}
+
+.col-select input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
 }
 
 .tabla-section td:last-child {
@@ -571,8 +610,8 @@ td[class*="valor"] {
 }
 
 /* Texto mono para IDs/identificación */
-td:nth-child(1), /* ID */
-td:nth-child(6) /* identificación */ {
+td:nth-child(2), /* ID */
+td:nth-child(7) /* identificación */ {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
 }
@@ -691,3 +730,5 @@ td:nth-child(6) /* identificación */ {
     grid-template-columns: 1fr;
   }
 }
+
+

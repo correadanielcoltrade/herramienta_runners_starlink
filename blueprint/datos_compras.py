@@ -286,6 +286,46 @@ def eliminar_compra(compra_id):
     })
 
 
+@datos_compras_bp.route('/api/batch-delete', methods=['POST'])
+def eliminar_compras_lote():
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids")
+    if not isinstance(ids, list) or not ids:
+        return jsonify({"msg": "ids requerido"}), 400
+
+    ids_int = []
+    for x in ids:
+        try:
+            ids_int.append(int(x))
+        except Exception:
+            continue
+
+    if not ids_int:
+        return jsonify({"msg": "ids invalido"}), 400
+
+    ids_set = set(ids_int)
+    compras = _read_json(COMPRAS_FILE)
+    compras_ids = {c.get("id") for c in compras}
+    missing_ids = sorted([i for i in ids_set if i not in compras_ids])
+
+    compras_filtradas = [c for c in compras if c.get("id") not in ids_set]
+    deleted_count = len(compras) - len(compras_filtradas)
+    _write_json(COMPRAS_FILE, compras_filtradas)
+
+    recepciones = _read_json(RECEPCIONES_FILE)
+    recepciones_filtradas = [r for r in recepciones if r.get("id_compra") not in ids_set]
+    deleted_recepciones = len(recepciones) - len(recepciones_filtradas)
+    if deleted_recepciones > 0:
+        _write_json(RECEPCIONES_FILE, recepciones_filtradas)
+
+    return jsonify({
+        "msg": "eliminados",
+        "deleted": deleted_count,
+        "missing": missing_ids,
+        "recepciones_eliminadas": deleted_recepciones
+    })
+
+
 # -----------------------
 #  PLANTILLA EXCEL (descarga)
 # -----------------------
@@ -457,16 +497,17 @@ def import_from_excel():
             precio_con_iva = row_vals.get("precio_unitario_con_iva", 0) or 0
             valor_flete = row_vals.get("valor_flete", 0) or 0
 
-            # si la celda viene como fecha (openpyxl date), convertir a ISO string
-            fc = row_vals.get("fecha_compra")
-            if isinstance(fc, (datetime, date)):
-                row_vals["fecha_compra"] = fc.isoformat()
-            elif fc is None:
-                row_vals["fecha_compra"] = ""
-
-            # normalizar strings
+            # normalizar fechas y strings (Excel puede traer datetime/date)
+            date_fields = {"fecha_compra", "fecha_recibo"}
             for k in list(row_vals.keys()):
-                if isinstance(row_vals[k], str):
+                v = row_vals[k]
+                if isinstance(v, datetime):
+                    row_vals[k] = v.date().isoformat()
+                elif isinstance(v, date):
+                    row_vals[k] = v.isoformat()
+                elif v is None and k in date_fields:
+                    row_vals[k] = ""
+                if isinstance(row_vals.get(k), str):
                     row_vals[k] = row_vals[k].strip()
 
             # convertir tipos
