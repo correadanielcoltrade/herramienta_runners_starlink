@@ -12,11 +12,6 @@ env/
 # Local environment / secrets
 .env
 
-# Sensitive local data
-data/login.json
-data/datoscompras.json
-data/recepciones_compras.json
-
 
 # Optional local IDE/system files
 .vscode/

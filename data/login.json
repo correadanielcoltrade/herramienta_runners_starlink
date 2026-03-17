@@ -1,0 +1,17 @@
+[
+  {
+    "correo": "rodriguezandrea@coltrade.com.co",
+    "contrasena": "Compras123", 
+    "roles": ["compras"]
+  },
+  {
+    "correo": "gutierrezfred@coltrade.com.co",
+    "contrasena": "Recepcion123", 
+    "roles": ["recepcion"]
+  },
+  {
+    "correo": "admin@ejemplo.com",
+    "contrasena": "admin", 
+    "roles": ["admin"]
+  }
+]
