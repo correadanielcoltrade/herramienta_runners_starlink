@@ -16,7 +16,7 @@ env/
 data/login.json
 data/datoscompras.json
 data/recepciones_compras.json
-data/mercadolibre.json
+
 
 # Optional local IDE/system files
 .vscode/

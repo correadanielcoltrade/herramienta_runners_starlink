@@ -1,6 +1,8 @@
 from typing import List, Dict, Any
-from flask import Blueprint, render_template, request, jsonify
+import os
+from flask import Blueprint, render_template, request, jsonify, send_from_directory
 from blueprint.user_store import load_users, save_users
+from blueprint.storage import create_backup_zip, get_backup_dir
 
 admin_panel_bp = Blueprint("admin_panel", __name__, url_prefix="/admin-panel")
 
@@ -171,3 +173,32 @@ def api_delete_user(correo):
         return jsonify({"msg": "Error guardando usuarios", "error": str(e)}), 500
 
     return jsonify({"msg": "Usuario eliminado", "correo": correo})
+
+
+@admin_panel_bp.route("/api/backup", methods=["POST"])
+def api_create_backup():
+    try:
+        result = create_backup_zip()
+    except Exception as e:
+        return jsonify({"msg": "Error creando backup", "error": str(e)}), 500
+
+    return jsonify({
+        "msg": "Backup creado",
+        "file": result.get("zip_name"),
+        "count": result.get("count", 0),
+        "files": result.get("files", [])
+    })
+
+
+@admin_panel_bp.route("/api/backup/download/<path:filename>", methods=["GET"])
+def api_download_backup(filename):
+    safe_name = os.path.basename(filename)
+    if safe_name != filename:
+        return jsonify({"msg": "Nombre invalido"}), 400
+
+    backup_dir = get_backup_dir()
+    target = os.path.join(backup_dir, safe_name)
+    if not os.path.exists(target):
+        return jsonify({"msg": "Backup no encontrado"}), 404
+
+    return send_from_directory(backup_dir, safe_name, as_attachment=True)

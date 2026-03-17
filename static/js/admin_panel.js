@@ -18,6 +18,9 @@
   const closeModalBtn = document.getElementById("btn-close-modal");
   const cancelEditBtn = document.getElementById("btn-cancel-edit");
   const deleteUserBtn = document.getElementById("btn-delete-user");
+  const backupBtn = document.getElementById("btn-create-backup");
+  const backupFeedback = document.getElementById("backup-feedback");
+  const backupDownloadLink = document.getElementById("backup-download-link");
 
   const roleInputsCreate = [
     document.getElementById("create-role-admin"),
@@ -57,6 +60,17 @@
     el.textContent = message || "";
     el.classList.toggle("error", isError);
     el.classList.toggle("success", Boolean(message) && !isError);
+  }
+
+  function setBackupDownloadLink(fileName) {
+    if (!backupDownloadLink) return;
+    if (!fileName) {
+      backupDownloadLink.hidden = true;
+      backupDownloadLink.removeAttribute("href");
+      return;
+    }
+    backupDownloadLink.href = `/admin-panel/api/backup/download/${encodeURIComponent(fileName)}`;
+    backupDownloadLink.hidden = false;
   }
 
   async function parseResponse(response) {
@@ -222,6 +236,31 @@
     }
   }
 
+  async function createBackup() {
+    if (!backupBtn) return;
+    backupBtn.disabled = true;
+    setFeedback(backupFeedback, "");
+    setBackupDownloadLink("");
+
+    try {
+      const response = await fetch("/admin-panel/api/backup", {
+        method: "POST",
+        credentials: "same-origin"
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.msg || "Error creando backup");
+      }
+      const count = body.count ?? 0;
+      setFeedback(backupFeedback, `Backup creado (${count} archivo(s)).`);
+      setBackupDownloadLink(body.file);
+    } catch (err) {
+      setFeedback(backupFeedback, err.message, true);
+    } finally {
+      backupBtn.disabled = false;
+    }
+  }
+
   usersTableBody.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action='edit']");
     if (!button) {
@@ -237,6 +276,7 @@
   closeModalBtn.addEventListener("click", closeEditModal);
   cancelEditBtn.addEventListener("click", closeEditModal);
   deleteUserBtn.addEventListener("click", deleteUser);
+  if (backupBtn) backupBtn.addEventListener("click", createBackup);
 
   editModal.addEventListener("click", (event) => {
     if (event.target === editModal) {

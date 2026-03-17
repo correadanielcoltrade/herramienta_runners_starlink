@@ -2,6 +2,8 @@ import json
 import os
 import shutil
 import tempfile
+import zipfile
+from datetime import datetime
 from typing import Any
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +47,51 @@ def data_file(filename: str, bootstrap_from_legacy: bool = True) -> str:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             shutil.copy2(legacy, path)
     return os.path.normpath(path)
+
+
+def get_backup_dir() -> str:
+    path = os.path.join(get_data_dir(), "backups")
+    os.makedirs(path, exist_ok=True)
+    return os.path.normpath(path)
+
+
+def list_data_files(extensions=(".json", ".xlsx")) -> list[str]:
+    data_dir = get_data_dir()
+    files = []
+    try:
+        for name in os.listdir(data_dir):
+            if name.startswith("."):
+                continue
+            if name == "backups":
+                continue
+            full = os.path.join(data_dir, name)
+            if not os.path.isfile(full):
+                continue
+            if extensions and not name.lower().endswith(tuple(extensions)):
+                continue
+            files.append(full)
+    except Exception:
+        return []
+    return files
+
+
+def create_backup_zip(extensions=(".json", ".xlsx")) -> dict:
+    backup_dir = get_backup_dir()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_name = f"backup_{timestamp}.zip"
+    zip_path = os.path.join(backup_dir, zip_name)
+
+    files = list_data_files(extensions=extensions)
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for path in files:
+            zf.write(path, arcname=os.path.basename(path))
+
+    return {
+        "zip_name": zip_name,
+        "zip_path": os.path.normpath(zip_path),
+        "count": len(files),
+        "files": [os.path.basename(p) for p in files]
+    }
 
 
 def write_json_atomic(path: str, payload: Any, indent: int = 4) -> None:

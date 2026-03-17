@@ -15,6 +15,7 @@
 
 .admin-card.wide {
   min-width: 0;
+  grid-column: 1 / -1;
 }
 
 .admin-card h2 {
@@ -82,6 +83,7 @@
   display: flex;
   justify-content: flex-start;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .form-actions.between {
@@ -130,6 +132,11 @@
 
 .btn.small {
   padding: 5px 9px;
+}
+
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .feedback {
