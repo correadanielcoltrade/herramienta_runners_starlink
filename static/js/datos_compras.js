@@ -22,6 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const selectAllCheckbox = $("select-all");
   const btnDeleteSelected = $("btn-delete-selected");
   const selectedCount = $("selected-count");
+  const pageSizeSelect = $("compras-page-size");
+  const pagePrevBtn = $("compras-page-prev");
+  const pageNextBtn = $("compras-page-next");
+  const pageInfo = $("compras-page-info");
+  const pageTotal = $("compras-page-total");
 
   function safe(v, d = "") { return (v === undefined || v === null) ? d : v; }
   function fmtNumber(v) {
@@ -57,6 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const canReadRecepcionesApi =
     Boolean(document.querySelector('a[href="/recepciones/"]')) ||
     Boolean(document.querySelector('a[href="/admin-panel/"]'));
+
+  const pageState = {
+    page: 1,
+    pageSize: 10
+  };
 
 
     // --- Import / Export / Template buttons ---
@@ -298,6 +308,29 @@ document.addEventListener("DOMContentLoaded", () => {
       btnDeleteSelected.disabled = selectedCompraIds.size === 0;
     }
     updateSelectAllState();
+  }
+
+  function updatePaginationUI(totalItems) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageState.pageSize));
+    if (pageState.page > totalPages) pageState.page = totalPages;
+
+    if (pageInfo) pageInfo.textContent = `Pagina ${pageState.page} de ${totalPages}`;
+    if (pageTotal) pageTotal.textContent = `${totalItems.toLocaleString()} registros`;
+    if (pagePrevBtn) pagePrevBtn.disabled = pageState.page <= 1;
+    if (pageNextBtn) pageNextBtn.disabled = pageState.page >= totalPages;
+    if (pageSizeSelect) pageSizeSelect.value = String(pageState.pageSize);
+  }
+
+  function paginateData(list) {
+    const totalItems = list.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageState.pageSize));
+    if (pageState.page > totalPages) pageState.page = totalPages;
+
+    const start = (pageState.page - 1) * pageState.pageSize;
+    const end = start + pageState.pageSize;
+    const slice = list.slice(start, end);
+    updatePaginationUI(totalItems);
+    return slice;
   }
 
   // -----------------------
@@ -628,7 +661,8 @@ if (claseEstado) {
   // -----------------------
   // apply filters and render
   // -----------------------
-  function applyFiltersAndRender() {
+  function applyFiltersAndRender(resetPage = false) {
+    if (resetPage) pageState.page = 1;
     const search = (filterSearch?.value || "").trim().toLowerCase();
     const desde = filterFechaDesde?.value || "";
     const hasta = filterFechaHasta?.value || "";
@@ -728,25 +762,51 @@ if (claseEstado) {
       return true;
     });
 
-    renderRows(filtered, recepcionesDict);
+    const paged = paginateData(filtered);
+    renderRows(paged, recepcionesDict);
   }
 
   const debouncedApply = debounce(applyFiltersAndRender, 200);
 
   // eventos filtros
-  if (filterSearch) filterSearch.addEventListener("input", () => debouncedApply());
-  if (filterFechaDesde) filterFechaDesde.addEventListener("change", () => applyFiltersAndRender());
-  if (filterFechaHasta) filterFechaHasta.addEventListener("change", () => applyFiltersAndRender());
-  if (filterEstadoRecepcion) filterEstadoRecepcion.addEventListener("change", () => applyFiltersAndRender());
-  if (btnAplicarFiltros) btnAplicarFiltros.addEventListener("click", (e) => { e.preventDefault(); applyFiltersAndRender(); });
+  if (filterSearch) filterSearch.addEventListener("input", () => debouncedApply(true));
+  if (filterFechaDesde) filterFechaDesde.addEventListener("change", () => applyFiltersAndRender(true));
+  if (filterFechaHasta) filterFechaHasta.addEventListener("change", () => applyFiltersAndRender(true));
+  if (filterEstadoRecepcion) filterEstadoRecepcion.addEventListener("change", () => applyFiltersAndRender(true));
+  if (btnAplicarFiltros) btnAplicarFiltros.addEventListener("click", (e) => { e.preventDefault(); applyFiltersAndRender(true); });
   if (btnLimpiarFiltros) btnLimpiarFiltros.addEventListener("click", (e) => {
     e.preventDefault();
     if (filterSearch) filterSearch.value = "";
     if (filterFechaDesde) filterFechaDesde.value = "";
     if (filterFechaHasta) filterFechaHasta.value = "";
     if (filterEstadoRecepcion) filterEstadoRecepcion.value = "";
-    applyFiltersAndRender();
+    applyFiltersAndRender(true);
   });
+
+  if (pagePrevBtn) {
+    pagePrevBtn.addEventListener("click", () => {
+      if (pageState.page > 1) {
+        pageState.page -= 1;
+        applyFiltersAndRender();
+      }
+    });
+  }
+
+  if (pageNextBtn) {
+    pageNextBtn.addEventListener("click", () => {
+      pageState.page += 1;
+      applyFiltersAndRender();
+    });
+  }
+
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener("change", () => {
+      const nextSize = Number(pageSizeSelect.value || 10);
+      pageState.pageSize = Number.isFinite(nextSize) ? nextSize : 10;
+      pageState.page = 1;
+      applyFiltersAndRender();
+    });
+  }
 
   // -----------------------
   // Cargar datos

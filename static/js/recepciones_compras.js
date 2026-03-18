@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const filtroEstadoEl = document.getElementById("filter-estado-recepcion-recep");
   const btnLimpiarFiltro = document.getElementById("btn-limpiar-filtro-recep");
   const inputBusquedaEl = document.getElementById("input-busqueda-recep"); // <-- buscador global
+  const pageSizeSelect = document.getElementById("recepciones-page-size");
+  const pagePrevBtn = document.getElementById("recepciones-page-prev");
+  const pageNextBtn = document.getElementById("recepciones-page-next");
+  const pageInfo = document.getElementById("recepciones-page-info");
+  const pageTotal = document.getElementById("recepciones-page-total");
 
   // =======================
   // Helpers
@@ -101,6 +106,21 @@ document.addEventListener("DOMContentLoaded", () => {
   // =======================
   let lastCompras = [];
   let lastRecepcionesDict = {};
+  const pageState = {
+    page: 1,
+    pageSize: 10
+  };
+
+  function updatePaginationUI(totalItems) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageState.pageSize));
+    if (pageState.page > totalPages) pageState.page = totalPages;
+
+    if (pageInfo) pageInfo.textContent = `Pagina ${pageState.page} de ${totalPages}`;
+    if (pageTotal) pageTotal.textContent = `${totalItems.toLocaleString()} registros`;
+    if (pagePrevBtn) pagePrevBtn.disabled = pageState.page <= 1;
+    if (pageNextBtn) pageNextBtn.disabled = pageState.page >= totalPages;
+    if (pageSizeSelect) pageSizeSelect.value = String(pageState.pageSize);
+  }
 
   // =======================
   // Cargar datos desde backend
@@ -142,6 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
     tabla.innerHTML = "";
 
     const filtro = (filtroEstadoEl?.value || "").trim().toLowerCase();
+    const filtered = [];
 
     compras.forEach(item => {
       const idCompra = item.id;
@@ -159,6 +180,25 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!cumpleBusquedaGlobal(item, recep)) {
         return;
       }
+
+      filtered.push({ item, recep });
+    });
+
+    const totalItems = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageState.pageSize));
+    if (pageState.page > totalPages) pageState.page = totalPages;
+
+    if (totalItems === 0) {
+      tabla.innerHTML = `<tr><td colspan="15">No hay registros con los filtros aplicados.</td></tr>`;
+      updatePaginationUI(0);
+      return;
+    }
+
+    const start = (pageState.page - 1) * pageState.pageSize;
+    const end = start + pageState.pageSize;
+    const pageRows = filtered.slice(start, end);
+
+    pageRows.forEach(({ item, recep }) => {
 
       const cliente = item.cliente || item.nombre || "";
       const producto = item.producto || item.descripcion || "";
@@ -320,7 +360,9 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
       }
-    }); // end compras.forEach
+    }); // end pageRows.forEach
+
+    updatePaginationUI(totalItems);
   } // end renderTable
 
   // =======================
@@ -328,6 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // =======================
   if (filtroEstadoEl) {
     filtroEstadoEl.addEventListener("change", () => {
+      pageState.page = 1;
       // re-render usando los datos en memoria (lastCompras)
       renderTable(lastCompras, lastRecepcionesDict);
     });
@@ -337,6 +380,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (inputBusquedaEl) {
     inputBusquedaEl.addEventListener("input", (e) => {
       textoBusqueda = (e.target.value || "").trim().toLowerCase();
+      pageState.page = 1;
       renderTable(lastCompras, lastRecepcionesDict);
     });
   }
@@ -346,6 +390,32 @@ document.addEventListener("DOMContentLoaded", () => {
       if (filtroEstadoEl) filtroEstadoEl.value = "";
       if (inputBusquedaEl) inputBusquedaEl.value = "";
       textoBusqueda = "";
+      pageState.page = 1;
+      renderTable(lastCompras, lastRecepcionesDict);
+    });
+  }
+
+  if (pagePrevBtn) {
+    pagePrevBtn.addEventListener("click", () => {
+      if (pageState.page > 1) {
+        pageState.page -= 1;
+        renderTable(lastCompras, lastRecepcionesDict);
+      }
+    });
+  }
+
+  if (pageNextBtn) {
+    pageNextBtn.addEventListener("click", () => {
+      pageState.page += 1;
+      renderTable(lastCompras, lastRecepcionesDict);
+    });
+  }
+
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener("change", () => {
+      const nextSize = Number(pageSizeSelect.value || 10);
+      pageState.pageSize = Number.isFinite(nextSize) ? nextSize : 10;
+      pageState.page = 1;
       renderTable(lastCompras, lastRecepcionesDict);
     });
   }

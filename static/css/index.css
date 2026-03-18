@@ -291,6 +291,58 @@
   margin-top: 8px;
   color: var(--text-muted);
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pagination-bar.compact {
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: #f8fafc;
+}
+
+.pagination-bar .page-size,
+.pagination-bar .page-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-bar label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.pagination-bar select {
+  padding: 4px 6px;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+}
+
+.pagination-bar .page-info {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.pagination-bar .btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
 }
 
 /* utilidad muted */

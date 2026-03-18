@@ -28,12 +28,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const recibidasCount = document.getElementById("recibidas-count");
   const pendientesBody = document.getElementById("pendientes-body");
   const pendientesCount = document.getElementById("pendientes-count");
+  const faltantesPageSize = document.getElementById("faltantes-page-size");
+  const faltantesPagePrev = document.getElementById("faltantes-page-prev");
+  const faltantesPageNext = document.getElementById("faltantes-page-next");
+  const faltantesPageInfo = document.getElementById("faltantes-page-info");
+  const recibidasPageSize = document.getElementById("recibidas-page-size");
+  const recibidasPagePrev = document.getElementById("recibidas-page-prev");
+  const recibidasPageNext = document.getElementById("recibidas-page-next");
+  const recibidasPageInfo = document.getElementById("recibidas-page-info");
+  const pendientesPageSize = document.getElementById("pendientes-page-size");
+  const pendientesPagePrev = document.getElementById("pendientes-page-prev");
+  const pendientesPageNext = document.getElementById("pendientes-page-next");
+  const pendientesPageInfo = document.getElementById("pendientes-page-info");
   const canReadRecepcionesApi =
     Boolean(document.querySelector('a[href="/recepciones/"]')) ||
     Boolean(document.querySelector('a[href="/admin-panel/"]'));
 
   // Estado local
   let allCompras = [];
+  const pagerFaltantes = { page: 1, pageSize: 10 };
+  const pagerRecibidas = { page: 1, pageSize: 10 };
+  const pagerPendientes = { page: 1, pageSize: 10 };
 
   // helpers
   function normalizeDateForFilter(v) {
@@ -66,6 +81,32 @@ document.addEventListener("DOMContentLoaded", () => {
       return "parcial";
     }
     return "";
+  }
+
+  function updatePagerUI(pager, totalItems, infoEl, prevBtn, nextBtn, sizeSelect) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / pager.pageSize));
+    if (pager.page > totalPages) pager.page = totalPages;
+
+    if (infoEl) infoEl.textContent = `Pagina ${pager.page} de ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = pager.page <= 1;
+    if (nextBtn) nextBtn.disabled = pager.page >= totalPages;
+    if (sizeSelect) sizeSelect.value = String(pager.pageSize);
+  }
+
+  function paginateRows(rows, pager, infoEl, prevBtn, nextBtn, sizeSelect) {
+    const totalItems = rows.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pager.pageSize));
+    if (pager.page > totalPages) pager.page = totalPages;
+    const start = (pager.page - 1) * pager.pageSize;
+    const end = start + pager.pageSize;
+    updatePagerUI(pager, totalItems, infoEl, prevBtn, nextBtn, sizeSelect);
+    return rows.slice(start, end);
+  }
+
+  function resetAllPagers() {
+    pagerFaltantes.page = 1;
+    pagerRecibidas.page = 1;
+    pagerPendientes.page = 1;
   }
 
   function buildOrderKey(item, idx) {
@@ -161,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (comprasResp.ok) {
         allCompras = comprasResp.data;
         populateFilters(allCompras);
-        applyAndRender();
+        applyAndRender(true);
         return;
       }
 
@@ -173,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const recepResp = await fetchJsonArray("/recepciones/api");
           allCompras = buildResumenFromRecepcion(comprasRecepResp.data, recepResp.data);
           populateFilters(allCompras);
-          applyAndRender();
+          applyAndRender(true);
           return;
         }
       }
@@ -183,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (resumenResp.ok) {
         allCompras = resumenResp.data;
         populateFilters(allCompras);
-        applyAndRender();
+        applyAndRender(true);
         return;
       }
 
@@ -227,7 +268,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function escapeHtmlAttr(s){ return (s===null||s===undefined)?"":String(s).replaceAll('"','&quot;'); }
 
   // filtrar y renderizar todo
-  function applyAndRender() {
+  function applyAndRender(resetPages = false) {
+    if (resetPages) resetAllPagers();
     const desde = filterDesde?.value || "";
     const hasta = filterHasta?.value || "";
     const estado = (filterEstado?.value || "").trim().toLowerCase();
@@ -366,10 +408,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filas.length === 0) {
       faltantesBody.innerHTML = `<tr><td colspan="8" class="muted">No hay ordenes parcialmente recibidas con los filtros aplicados.</td></tr>`;
       faltantesCount.textContent = "0";
+      updatePagerUI(pagerFaltantes, 0, faltantesPageInfo, faltantesPagePrev, faltantesPageNext, faltantesPageSize);
       return;
     }
 
-    const rowsHtml = filas.map(r => {
+    const paged = paginateRows(
+      filas,
+      pagerFaltantes,
+      faltantesPageInfo,
+      faltantesPagePrev,
+      faltantesPageNext,
+      faltantesPageSize
+    );
+
+    const rowsHtml = paged.map(r => {
       const fecha = normalizeDateForFilter(r.item.fecha_compra) || "";
       const valorF = r.valores.valorFaltante;
       return `<tr>
@@ -408,10 +460,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filas.length === 0) {
       recibidasBody.innerHTML = `<tr><td colspan="8" class="muted">No hay ordenes completas con los filtros aplicados.</td></tr>`;
       recibidasCount.textContent = "0";
+      updatePagerUI(pagerRecibidas, 0, recibidasPageInfo, recibidasPagePrev, recibidasPageNext, recibidasPageSize);
       return;
     }
 
-    const rowsHtml = filas.map(r => {
+    const paged = paginateRows(
+      filas,
+      pagerRecibidas,
+      recibidasPageInfo,
+      recibidasPagePrev,
+      recibidasPageNext,
+      recibidasPageSize
+    );
+
+    const rowsHtml = paged.map(r => {
       const fecha = normalizeDateForFilter(r.item.fecha_compra) || "";
       const valorRec = r.valores.valorRecibido;
       return `<tr>
@@ -440,10 +502,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filas.length === 0) {
       pendientesBody.innerHTML = `<tr><td colspan="8" class="muted">No hay ordenes pendientes con los filtros aplicados.</td></tr>`;
       pendientesCount.textContent = "0";
+      updatePagerUI(pagerPendientes, 0, pendientesPageInfo, pendientesPagePrev, pendientesPageNext, pendientesPageSize);
       return;
     }
 
-    const rowsHtml = filas.map(r => {
+    const paged = paginateRows(
+      filas,
+      pagerPendientes,
+      pendientesPageInfo,
+      pendientesPagePrev,
+      pendientesPageNext,
+      pendientesPageSize
+    );
+
+    const rowsHtml = paged.map(r => {
       const fecha = normalizeDateForFilter(r.item.fecha_compra) || "";
       const valorPend = r.valores.valorFaltante;
       return `<tr>
@@ -463,7 +535,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Eventos UI
-  if (btnAplicar) btnAplicar.addEventListener("click", (e)=>{ e.preventDefault(); applyAndRender(); });
+  if (btnAplicar) btnAplicar.addEventListener("click", (e)=>{ e.preventDefault(); applyAndRender(true); });
   if (btnLimpiar) {
     btnLimpiar.addEventListener("click", (e)=> {
       e.preventDefault();
@@ -474,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
       filterResponsable.value = "";
       filterCliente.value = "";
       if (searchBox) searchBox.value = "";
-      applyAndRender();
+      applyAndRender(true);
     });
   }
 
@@ -483,14 +555,83 @@ document.addEventListener("DOMContentLoaded", () => {
   if (searchBox) {
     searchBox.addEventListener("input", (e) => {
       clearTimeout(tSearch);
-      tSearch = setTimeout(()=> applyAndRender(), 180);
+      tSearch = setTimeout(()=> applyAndRender(true), 180);
     });
     // ESC borra
     document.addEventListener("keydown", (ev) => {
       if (ev.key === "Escape") {
         searchBox.value = "";
+        applyAndRender(true);
+      }
+    });
+  }
+
+  if (faltantesPagePrev) {
+    faltantesPagePrev.addEventListener("click", () => {
+      if (pagerFaltantes.page > 1) {
+        pagerFaltantes.page -= 1;
         applyAndRender();
       }
+    });
+  }
+  if (faltantesPageNext) {
+    faltantesPageNext.addEventListener("click", () => {
+      pagerFaltantes.page += 1;
+      applyAndRender();
+    });
+  }
+  if (faltantesPageSize) {
+    faltantesPageSize.addEventListener("change", () => {
+      const nextSize = Number(faltantesPageSize.value || 10);
+      pagerFaltantes.pageSize = Number.isFinite(nextSize) ? nextSize : 10;
+      pagerFaltantes.page = 1;
+      applyAndRender();
+    });
+  }
+
+  if (recibidasPagePrev) {
+    recibidasPagePrev.addEventListener("click", () => {
+      if (pagerRecibidas.page > 1) {
+        pagerRecibidas.page -= 1;
+        applyAndRender();
+      }
+    });
+  }
+  if (recibidasPageNext) {
+    recibidasPageNext.addEventListener("click", () => {
+      pagerRecibidas.page += 1;
+      applyAndRender();
+    });
+  }
+  if (recibidasPageSize) {
+    recibidasPageSize.addEventListener("change", () => {
+      const nextSize = Number(recibidasPageSize.value || 10);
+      pagerRecibidas.pageSize = Number.isFinite(nextSize) ? nextSize : 10;
+      pagerRecibidas.page = 1;
+      applyAndRender();
+    });
+  }
+
+  if (pendientesPagePrev) {
+    pendientesPagePrev.addEventListener("click", () => {
+      if (pagerPendientes.page > 1) {
+        pagerPendientes.page -= 1;
+        applyAndRender();
+      }
+    });
+  }
+  if (pendientesPageNext) {
+    pendientesPageNext.addEventListener("click", () => {
+      pagerPendientes.page += 1;
+      applyAndRender();
+    });
+  }
+  if (pendientesPageSize) {
+    pendientesPageSize.addEventListener("change", () => {
+      const nextSize = Number(pendientesPageSize.value || 10);
+      pagerPendientes.pageSize = Number.isFinite(nextSize) ? nextSize : 10;
+      pagerPendientes.page = 1;
+      applyAndRender();
     });
   }
 

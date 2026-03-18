@@ -311,6 +311,25 @@
     </table>
   </div>
 
+  <div class="pagination-bar" aria-label="Paginacion de compras">
+    <div class="page-size">
+      <label for="compras-page-size">Filas</label>
+      <select id="compras-page-size">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+    <div class="page-controls">
+      <button id="compras-page-prev" class="btn" type="button">Anterior</button>
+      <span id="compras-page-info" class="page-info">Pagina 1 de 1</span>
+      <button id="compras-page-next" class="btn" type="button">Siguiente</button>
+    </div>
+    <div class="page-total">
+      <span id="compras-page-total">0 registros</span>
+    </div>
+  </div>
+
 </main>
 
 {% endblock %}

@@ -8,6 +8,11 @@
 
   const refreshBtn = document.getElementById("btn-refresh-users");
   const usersTableBody = document.getElementById("users-table-body");
+  const pageSizeSelect = document.getElementById("users-page-size");
+  const pagePrevBtn = document.getElementById("users-page-prev");
+  const pageNextBtn = document.getElementById("users-page-next");
+  const pageInfo = document.getElementById("users-page-info");
+  const pageTotal = document.getElementById("users-page-total");
 
   const editModal = document.getElementById("edit-user-modal");
   const editForm = document.getElementById("edit-user-form");
@@ -35,6 +40,10 @@
   ];
 
   let users = [];
+  const pageState = {
+    page: 1,
+    pageSize: 10
+  };
 
   function escapeHtml(text) {
     return String(text || "")
@@ -90,19 +99,39 @@
         credentials: "same-origin"
       });
       users = await parseResponse(response);
+      pageState.page = 1;
       renderUsers();
     } catch (err) {
       usersTableBody.innerHTML = `<tr><td colspan="4" class="error-cell">${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
+  function updatePaginationUI(totalItems) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageState.pageSize));
+    if (pageState.page > totalPages) pageState.page = totalPages;
+
+    if (pageInfo) pageInfo.textContent = `Pagina ${pageState.page} de ${totalPages}`;
+    if (pageTotal) pageTotal.textContent = `${totalItems.toLocaleString()} registros`;
+    if (pagePrevBtn) pagePrevBtn.disabled = pageState.page <= 1;
+    if (pageNextBtn) pageNextBtn.disabled = pageState.page >= totalPages;
+    if (pageSizeSelect) pageSizeSelect.value = String(pageState.pageSize);
+  }
+
   function renderUsers() {
     if (!Array.isArray(users) || users.length === 0) {
       usersTableBody.innerHTML = '<tr><td colspan="4" class="muted">No hay usuarios registrados.</td></tr>';
+      updatePaginationUI(0);
       return;
     }
 
-    usersTableBody.innerHTML = users.map((user) => {
+    const totalItems = users.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageState.pageSize));
+    if (pageState.page > totalPages) pageState.page = totalPages;
+    const start = (pageState.page - 1) * pageState.pageSize;
+    const end = start + pageState.pageSize;
+    const pageUsers = users.slice(start, end);
+
+    usersTableBody.innerHTML = pageUsers.map((user) => {
       const correo = escapeHtml(user.correo);
       const roleBadges = (user.roles || []).map((role) => `<span class="role-badge">${escapeHtml(role)}</span>`).join(" ");
       const hasPassword = user.has_password ? "Configurada" : "Sin definir";
@@ -118,6 +147,8 @@
         </tr>
       `;
     }).join("");
+
+    updatePaginationUI(totalItems);
   }
 
   function openEditModal(correo) {
@@ -277,6 +308,31 @@
   cancelEditBtn.addEventListener("click", closeEditModal);
   deleteUserBtn.addEventListener("click", deleteUser);
   if (backupBtn) backupBtn.addEventListener("click", createBackup);
+
+  if (pagePrevBtn) {
+    pagePrevBtn.addEventListener("click", () => {
+      if (pageState.page > 1) {
+        pageState.page -= 1;
+        renderUsers();
+      }
+    });
+  }
+
+  if (pageNextBtn) {
+    pageNextBtn.addEventListener("click", () => {
+      pageState.page += 1;
+      renderUsers();
+    });
+  }
+
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener("change", () => {
+      const nextSize = Number(pageSizeSelect.value || 10);
+      pageState.pageSize = Number.isFinite(nextSize) ? nextSize : 10;
+      pageState.page = 1;
+      renderUsers();
+    });
+  }
 
   editModal.addEventListener("click", (event) => {
     if (event.target === editModal) {

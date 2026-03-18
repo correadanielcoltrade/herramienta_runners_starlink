@@ -66,6 +66,25 @@
         <tbody id="tabla-recepciones" aria-live="polite" aria-atomic="true"></tbody>
       </table>
     </div>
+
+    <div class="pagination-bar" aria-label="Paginacion de recepciones">
+      <div class="page-size">
+        <label for="recepciones-page-size">Filas</label>
+        <select id="recepciones-page-size">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+      <div class="page-controls">
+        <button id="recepciones-page-prev" class="btn" type="button">Anterior</button>
+        <span id="recepciones-page-info" class="page-info">Pagina 1 de 1</span>
+        <button id="recepciones-page-next" class="btn" type="button">Siguiente</button>
+      </div>
+      <div class="page-total">
+        <span id="recepciones-page-total">0 registros</span>
+      </div>
+    </div>
   </div>
 </main>
 

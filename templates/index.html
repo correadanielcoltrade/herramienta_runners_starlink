@@ -133,7 +133,22 @@
       </table>
     </div>
     <div class="table-footer">
-      <span id="faltantes-count">0</span> filas
+      <div class="pagination-bar compact" aria-label="Paginacion faltantes">
+        <div class="page-size">
+          <label for="faltantes-page-size">Filas</label>
+          <select id="faltantes-page-size">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <div class="page-controls">
+          <button id="faltantes-page-prev" class="btn" type="button">Anterior</button>
+          <span id="faltantes-page-info" class="page-info">Pagina 1 de 1</span>
+          <button id="faltantes-page-next" class="btn" type="button">Siguiente</button>
+        </div>
+      </div>
+      <span><span id="faltantes-count">0</span> filas</span>
     </div>
   </section>
 
@@ -160,7 +175,22 @@
         </table>
       </div>
       <div class="table-footer">
-        <span id="recibidas-count">0</span> filas
+        <div class="pagination-bar compact" aria-label="Paginacion recibidas">
+          <div class="page-size">
+            <label for="recibidas-page-size">Filas</label>
+            <select id="recibidas-page-size">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <div class="page-controls">
+            <button id="recibidas-page-prev" class="btn" type="button">Anterior</button>
+            <span id="recibidas-page-info" class="page-info">Pagina 1 de 1</span>
+            <button id="recibidas-page-next" class="btn" type="button">Siguiente</button>
+          </div>
+        </div>
+        <span><span id="recibidas-count">0</span> filas</span>
       </div>
     </section>
 
@@ -186,7 +216,22 @@
         </table>
       </div>
       <div class="table-footer">
-        <span id="pendientes-count">0</span> filas
+        <div class="pagination-bar compact" aria-label="Paginacion pendientes">
+          <div class="page-size">
+            <label for="pendientes-page-size">Filas</label>
+            <select id="pendientes-page-size">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <div class="page-controls">
+            <button id="pendientes-page-prev" class="btn" type="button">Anterior</button>
+            <span id="pendientes-page-info" class="page-info">Pagina 1 de 1</span>
+            <button id="pendientes-page-next" class="btn" type="button">Siguiente</button>
+          </div>
+        </div>
+        <span><span id="pendientes-count">0</span> filas</span>
       </div>
     </section>
   </section>
