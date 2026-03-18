@@ -57,6 +57,8 @@ def bootstrap_from_json() -> Dict[str, Any]:
         "skipped": False,
     }
 
+    compra_ids: set[int] = set()
+
     if compras and _table_is_empty("compras"):
         with db_cursor() as cur:
             for compra in compras:
@@ -90,11 +92,15 @@ def bootstrap_from_json() -> Dict[str, Any]:
                 "COALESCE((SELECT MAX(id) FROM compras), 1), true)"
             )
 
+    # Siempre obtener IDs reales de compras antes de insertar recepciones
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM compras")
+        compra_ids = {int(r["id"]) for r in (cur.fetchall() or [])}
+
     if recepciones and _table_is_empty("recepciones"):
-        compra_ids = set()
-        with db_cursor() as cur:
-            cur.execute("SELECT id FROM compras")
-            compra_ids = {int(r["id"]) for r in (cur.fetchall() or [])}
+        if not compra_ids:
+            result["recepciones_skipped"] = "no_compras"
+            return result
         with db_cursor() as cur:
             for recep in recepciones:
                 compra_id = recep.get("id_compra")
@@ -104,7 +110,7 @@ def bootstrap_from_json() -> Dict[str, Any]:
                     compra_id_int = int(compra_id)
                 except Exception:
                     continue
-                if compra_ids and compra_id_int not in compra_ids:
+                if compra_id_int not in compra_ids:
                     continue
                 payload = dict(recep)
                 recep_id = payload.pop("id", None)
