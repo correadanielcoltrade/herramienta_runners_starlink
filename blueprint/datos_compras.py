@@ -7,6 +7,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from flask import send_file
 from blueprint.storage import data_file, write_json_atomic
+from blueprint.db import is_db_configured
+from blueprint import db_store
 
 datos_compras_bp = Blueprint('datos_compras', __name__, url_prefix='/datos-compras')
 
@@ -21,6 +23,16 @@ def _read_json(path):
 
 def _write_json(path, data):
     write_json_atomic(path, data, indent=4)
+
+def _read_compras():
+    if is_db_configured():
+        return db_store.fetch_compras()
+    return _read_json(COMPRAS_FILE)
+
+def _read_recepciones():
+    if is_db_configured():
+        return db_store.fetch_recepciones()
+    return _read_json(RECEPCIONES_FILE)
 
 def _to_int(value, default=0):
     try:
@@ -116,13 +128,16 @@ def page():
 # GET: devuelve compras con estado cruzado con recepciones
 @datos_compras_bp.route('/api', methods=['GET'])
 def get_compras():
-    compras = _read_json(COMPRAS_FILE)
-    recepciones = _read_json(RECEPCIONES_FILE)
-    recepciones_dict = {
-        r.get("id_compra"): r
-        for r in recepciones
-        if isinstance(r, dict) and r.get("id_compra") is not None
-    }
+    compras = _read_compras()
+    if is_db_configured():
+        recepciones_dict = db_store.fetch_recepciones_map()
+    else:
+        recepciones = _read_recepciones()
+        recepciones_dict = {
+            r.get("id_compra"): r
+            for r in recepciones
+            if isinstance(r, dict) and r.get("id_compra") is not None
+        }
     compras_con_estado = []
 
     for compra in compras:
@@ -198,14 +213,10 @@ def crear_compra():
     if not payload:
         return jsonify({"msg": "payload vacio"}), 400
 
-    compras = _read_json(COMPRAS_FILE)
-    new_id = max([c.get("id", 0) for c in compras], default=0) + 1
-
     payload = _normalizar_compra_payload(_remove_obsolete_fields(dict(payload)), {})
     cantidad = _to_int(payload.get("cantidad_comprada", 0), 0)
 
     nuevo = {
-        "id": new_id,
         **payload,
         # campos de recepcion por defecto
         "unidades_recibidas": 0,
@@ -213,6 +224,13 @@ def crear_compra():
         "estado_recepcion": "Pendiente"
     }
 
+    if is_db_configured():
+        new_id = db_store.insert_compra(nuevo)
+        return jsonify({"msg": "creado", "id": new_id})
+
+    compras = _read_json(COMPRAS_FILE)
+    new_id = max([c.get("id", 0) for c in compras], default=0) + 1
+    nuevo = {"id": new_id, **nuevo}
     compras.append(nuevo)
     _write_json(COMPRAS_FILE, compras)
     return jsonify({"msg": "creado", "id": new_id})
@@ -223,6 +241,42 @@ def actualizar_compra(compra_id):
     payload = request.get_json()
     if not payload:
         return jsonify({"msg": "payload vacio"}), 400
+
+    if is_db_configured():
+        compra_actual = db_store.fetch_compra_by_id(compra_id)
+        if not compra_actual:
+            return jsonify({"msg": "compra no encontrada"}), 404
+
+        compra_actualizada = _normalizar_compra_payload(payload, compra_actual)
+
+        recep = db_store.fetch_recepcion_by_compra(compra_id)
+        cantidad = _to_int(compra_actualizada.get("cantidad_comprada", 0), 0)
+        if recep:
+            unidades_recibidas = _to_int(recep.get("unidades_recibidas", 0), 0)
+            recep_payload = dict(recep)
+            recep_payload.pop("id", None)
+            recep_payload.pop("id_compra", None)
+            recep_payload["cantidad_compra"] = cantidad
+            recep_payload["unidades_faltantes"] = max(0, cantidad - unidades_recibidas)
+            compra_actualizada["unidades_recibidas"] = unidades_recibidas
+            compra_actualizada["unidades_faltantes"] = recep_payload["unidades_faltantes"]
+            db_store.update_recepcion(recep.get("id"), recep_payload)
+        else:
+            unidades_recibidas = _to_int(compra_actualizada.get("unidades_recibidas", 0), 0)
+            compra_actualizada["unidades_recibidas"] = unidades_recibidas
+            compra_actualizada["unidades_faltantes"] = max(0, cantidad - unidades_recibidas)
+
+        if cantidad > 0 and compra_actualizada["unidades_recibidas"] >= cantidad:
+            compra_actualizada["estado_recepcion"] = "Completa"
+        elif compra_actualizada["unidades_recibidas"] == 0:
+            compra_actualizada["estado_recepcion"] = "Pendiente"
+        else:
+            compra_actualizada["estado_recepcion"] = "Parcial"
+
+        compra_payload = dict(compra_actualizada)
+        compra_payload.pop("id", None)
+        db_store.update_compra(compra_id, compra_payload)
+        return jsonify({"msg": "actualizado", "id": compra_id})
 
     compras = _read_json(COMPRAS_FILE)
     idx = next((i for i, c in enumerate(compras) if c.get("id") == compra_id), -1)
@@ -265,6 +319,19 @@ def actualizar_compra(compra_id):
 
 @datos_compras_bp.route('/api/<int:compra_id>', methods=['DELETE'])
 def eliminar_compra(compra_id):
+    if is_db_configured():
+        compra_existente = db_store.fetch_compra_by_id(compra_id)
+        if not compra_existente:
+            return jsonify({"msg": "compra no encontrada"}), 404
+
+        deleted_recepciones = db_store.count_recepciones_by_compra_id(compra_id)
+        db_store.delete_compra(compra_id)
+        return jsonify({
+            "msg": "eliminado",
+            "id": compra_id,
+            "recepciones_eliminadas": deleted_recepciones
+        })
+
     compras = _read_json(COMPRAS_FILE)
     compra_existente = next((c for c in compras if c.get("id") == compra_id), None)
     if not compra_existente:
@@ -304,6 +371,19 @@ def eliminar_compras_lote():
         return jsonify({"msg": "ids invalido"}), 400
 
     ids_set = set(ids_int)
+
+    if is_db_configured():
+        existing_ids = set(db_store.fetch_compras_ids(ids_int))
+        missing_ids = sorted([i for i in ids_set if i not in existing_ids])
+        deleted_recepciones = db_store.count_recepciones_by_compra_ids(ids_int)
+        deleted_count = db_store.delete_compras(ids_int)
+        return jsonify({
+            "msg": "eliminados",
+            "deleted": deleted_count,
+            "missing": missing_ids,
+            "recepciones_eliminadas": deleted_recepciones
+        })
+
     compras = _read_json(COMPRAS_FILE)
     compras_ids = {c.get("id") for c in compras}
     missing_ids = sorted([i for i in ids_set if i not in compras_ids])
@@ -467,12 +547,15 @@ def import_from_excel():
     # índices de columnas que se usarán
     header_index = {h: i for i, h in enumerate(headers)}
 
-    compras = _read_json(COMPRAS_FILE)
-    next_id = max([c.get("id", 0) for c in compras], default=0) + 1
-
     imported = 0
     errors = []
     new_rows = []
+    compras = None
+    next_id = None
+
+    if not is_db_configured():
+        compras = _read_json(COMPRAS_FILE)
+        next_id = max([c.get("id", 0) for c in compras], default=0) + 1
 
     # iterar filas desde fila 2
     for row_idx in range(2, ws.max_row + 1):
@@ -536,7 +619,6 @@ def import_from_excel():
                 valor_flete_num = 0.0
 
             nuevo = {
-                "id": next_id,
                 **{k: (v if v is not None else "") for k, v in row_vals.items()},
                 "precio_unitario_sin_iva": precio_sin_iva_num,
                 "precio_unitario_con_iva": precio_con_iva_num,
@@ -549,18 +631,24 @@ def import_from_excel():
             }
             _calcular_totales(nuevo)
 
-            compras.append(nuevo)
-            new_rows.append({"row": row_idx, "id": next_id})
-            next_id += 1
+            if is_db_configured():
+                new_id = db_store.insert_compra(nuevo)
+                new_rows.append({"row": row_idx, "id": new_id})
+            else:
+                nuevo["id"] = next_id
+                compras.append(nuevo)
+                new_rows.append({"row": row_idx, "id": next_id})
+                next_id += 1
             imported += 1
         except Exception as e:
             errors.append({"row": row_idx, "error": str(e)})
 
-    # persistir
-    try:
-        _write_json(COMPRAS_FILE, compras)
-    except Exception as e:
-        return jsonify({"msg": "Error al guardar datos", "error": str(e)}), 500
+    # persistir (solo JSON)
+    if not is_db_configured():
+        try:
+            _write_json(COMPRAS_FILE, compras)
+        except Exception as e:
+            return jsonify({"msg": "Error al guardar datos", "error": str(e)}), 500
 
     return jsonify({
         "msg": "import finished",
@@ -578,7 +666,7 @@ def export_to_excel():
     Exporta todos los registros actuales a un archivo Excel y lo devuelve.
     - Si quieres filtrar por algún parámetro, puedes añadir query params y aplicar filtros.
     """
-    compras = _read_json(COMPRAS_FILE)
+    compras = _read_compras()
 
     headers = [
         "id",
@@ -657,8 +745,8 @@ def export_faltantes_excel():
     (derivado a partir de datos de recepciones o campo estado_recepcion).
     """
     # leer archivos
-    compras = _read_json(COMPRAS_FILE)
-    recepciones = _read_json(RECEPCIONES_FILE)
+    compras = _read_compras()
+    recepciones = _read_recepciones()
     recepciones_dict = {r.get("id_compra"): r for r in recepciones if r and r.get("id_compra") is not None}
 
     # función local para derivar estado al estilo del GET /api

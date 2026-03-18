@@ -6,6 +6,9 @@ import zipfile
 from datetime import datetime
 from typing import Any
 
+from blueprint.db import is_db_configured
+from blueprint import db_store
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.normpath(os.path.join(BASE_DIR, ".."))
 LEGACY_DATA_DIR = os.path.join(PROJECT_ROOT, "data")
@@ -81,10 +84,47 @@ def create_backup_zip(extensions=(".json", ".xlsx")) -> dict:
     zip_name = f"backup_{timestamp}.zip"
     zip_path = os.path.join(backup_dir, zip_name)
 
-    files = list_data_files(extensions=extensions)
+    files = []
+    temp_dir = None
+
+    if is_db_configured():
+        temp_dir = os.path.join(backup_dir, f".tmp_backup_{timestamp}")
+        os.makedirs(temp_dir, exist_ok=True)
+
+        snapshots = {
+            "datoscompras.json": db_store.fetch_compras(),
+            "recepciones_compras.json": db_store.fetch_recepciones(),
+            "login.json": db_store.fetch_users(),
+        }
+
+        for name, payload in snapshots.items():
+            path = os.path.join(temp_dir, name)
+            write_json_atomic(path, payload, indent=2)
+            files.append(path)
+
+        # Incluir archivos xlsx locales si existen
+        data_dir = get_data_dir()
+        try:
+            for name in os.listdir(data_dir):
+                if not name.lower().endswith(".xlsx"):
+                    continue
+                full = os.path.join(data_dir, name)
+                if os.path.isfile(full):
+                    files.append(full)
+        except Exception:
+            pass
+    else:
+        files = list_data_files(extensions=extensions)
+
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in files:
             zf.write(path, arcname=os.path.basename(path))
+
+    if temp_dir:
+        try:
+            shutil.rmtree(temp_dir)
+        except Exception:
+            pass
 
     return {
         "zip_name": zip_name,

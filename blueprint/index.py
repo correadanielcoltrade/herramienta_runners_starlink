@@ -6,6 +6,8 @@ from datetime import datetime, date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, jsonify
 import pandas as pd
 from blueprint.storage import data_file, get_data_dir, write_json_atomic
+from blueprint.db import is_db_configured
+from blueprint import db_store
 
 index_bp = Blueprint('inicio', __name__, url_prefix='/inicio')
 
@@ -126,6 +128,18 @@ def _read_json_list(path):
     except Exception:
         return []
 
+
+def _read_compras():
+    if is_db_configured():
+        return db_store.fetch_compras()
+    return _read_json_list(COMPRAS_PATH)
+
+
+def _read_recepciones():
+    if is_db_configured():
+        return db_store.fetch_recepciones()
+    return _read_json_list(RECEPCIONES_PATH)
+
 def _to_int(value, default=0):
     try:
         if value is None or value == "":
@@ -181,8 +195,8 @@ def resumen_compras_api():
     Endpoint de resumen para dashboard.
     Unifica compras + recepciones para que funcione con roles de compras y recepcion.
     """
-    compras = _read_json_list(COMPRAS_PATH)
-    recepciones = _read_json_list(RECEPCIONES_PATH)
+    compras = _read_compras()
+    recepciones = _read_recepciones()
     recepciones_dict = {
         r.get("id_compra"): r
         for r in recepciones

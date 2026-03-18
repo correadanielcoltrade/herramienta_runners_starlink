@@ -17,6 +17,8 @@ from blueprint.datos_compras import datos_compras_bp
 from blueprint.recepciones_compras import recepciones_bp
 from blueprint.admin_panel import admin_panel_bp
 from blueprint.storage import get_data_dir
+from blueprint.db import init_db, is_db_configured
+from blueprint.db_bootstrap import bootstrap_from_json
 
 # =========================
 # Configuracion de rutas
@@ -31,6 +33,9 @@ STATIC_DIR = os.path.join(BASE_DIR, 'static')
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY') or 'dev-key-solo-para-desarrollo'
 app.config['DATA_DIR'] = get_data_dir()
+if is_db_configured():
+    init_db()
+    bootstrap_from_json()
 
 # =========================
 # Registrar blueprints

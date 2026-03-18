@@ -2,6 +2,8 @@ import os
 import json
 from flask import Blueprint, render_template, request, jsonify
 from blueprint.storage import data_file, write_json_atomic
+from blueprint.db import is_db_configured
+from blueprint import db_store
 
 recepciones_bp = Blueprint('recepciones_compras', __name__, url_prefix='/recepciones')
 
@@ -17,6 +19,16 @@ def _read_json(path):
 def _write_json(path, data):
     write_json_atomic(path, data, indent=4)
 
+def _read_compras():
+    if is_db_configured():
+        return db_store.fetch_compras()
+    return _read_json(COMPRAS_FILE)
+
+def _read_recepciones():
+    if is_db_configured():
+        return db_store.fetch_recepciones()
+    return _read_json(RECEPCIONES_FILE)
+
 def _clean_recepcion_fields(data):
     if not isinstance(data, dict):
         return data
@@ -30,7 +42,7 @@ def page():
 # endpoint para que el front obtenga compras pre-cargadas (solo campos necesarios)
 @recepciones_bp.route('/api/compras', methods=['GET'])
 def compras_para_recepcion():
-    compras = _read_json(COMPRAS_FILE)
+    compras = _read_compras()
     # devolvemos campos de solo lectura para recepciones y resumen
     salida = []
     for c in compras:
@@ -60,7 +72,7 @@ def compras_para_recepcion():
 # obtener recepciones guardadas
 @recepciones_bp.route('/api', methods=['GET'])
 def get_recepciones():
-    recepciones = _read_json(RECEPCIONES_FILE)
+    recepciones = _read_recepciones()
     salida = []
     for r in recepciones:
         salida.append(_clean_recepcion_fields(dict(r)))
@@ -76,6 +88,67 @@ def guardar_recepcion():
     id_compra = payload.get("id_compra")
     if not id_compra:
         return jsonify({"msg": "id_compra requerido"}), 400
+    if is_db_configured():
+        recep = db_store.fetch_recepcion_by_compra(id_compra)
+        unidades_recibidas = int(payload.get("unidades_recibidas", 0))
+        cantidad_compra = int(payload.get("cantidad_compra", 0))
+
+        if recep:
+            recep_payload = dict(recep)
+            recep_payload.pop("id", None)
+            recep_payload.pop("id_compra", None)
+            recep_payload.update({
+                "rc_odoo": payload.get("rc_odoo"),
+                "fecha_recibo_odoo": payload.get("fecha_recibo_odoo"),
+                "metodo_entrega": payload.get("metodo_entrega"),
+                "unidades_recibidas": unidades_recibidas,
+                "observaciones_ops": payload.get("observaciones_ops", "")
+            })
+            _clean_recepcion_fields(recep_payload)
+            recep_payload["cantidad_compra"] = cantidad_compra
+            recep_payload["unidades_faltantes"] = cantidad_compra - unidades_recibidas
+            db_store.update_recepcion(recep.get("id"), recep_payload)
+        else:
+            recepcion_nueva = {
+                "id_compra": id_compra,
+                "cliente": payload.get("cliente"),
+                "producto": payload.get("producto"),
+                "oc_coltrade": payload.get("oc_coltrade"),
+                "pedido_proveedor": payload.get("pedido_proveedor"),
+                "factura_proveedor": payload.get("factura_proveedor"),
+                "rc_odoo": payload.get("rc_odoo"),
+                "fecha_recibo_odoo": payload.get("fecha_recibo_odoo"),
+                "proveedor": payload.get("proveedor"),
+                "metodo_entrega": payload.get("metodo_entrega"),
+                "cantidad_compra": cantidad_compra,
+                "unidades_recibidas": unidades_recibidas,
+                "unidades_faltantes": cantidad_compra - unidades_recibidas,
+                "observaciones_ops": payload.get("observaciones_ops", "")
+            }
+            db_store.insert_recepcion(id_compra, recepcion_nueva)
+
+        # actualizar compra relacionada
+        compra = db_store.fetch_compra_by_id(id_compra)
+        if compra:
+            rec = db_store.fetch_recepcion_by_compra(id_compra)
+            if rec:
+                compra["unidades_recibidas"] = rec.get("unidades_recibidas", 0)
+                compra["unidades_faltantes"] = rec.get(
+                    "unidades_faltantes",
+                    compra.get("cantidad_comprada", 0),
+                )
+                if compra["unidades_recibidas"] == 0:
+                    compra["estado_recepcion"] = "Pendiente"
+                elif compra["unidades_faltantes"] > 0:
+                    compra["estado_recepcion"] = "Parcial"
+                else:
+                    compra["estado_recepcion"] = "Completa"
+                compra_payload = dict(compra)
+                compra_payload.pop("id", None)
+                db_store.update_compra(id_compra, compra_payload)
+
+        saved = db_store.fetch_recepcion_by_compra(id_compra)
+        return jsonify({"msg": "guardado", "saved": saved})
 
     recepciones = _read_json(RECEPCIONES_FILE)
 
