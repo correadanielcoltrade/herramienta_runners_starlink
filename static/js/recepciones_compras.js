@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageRows = filtered.slice(start, end);
 
     pageRows.forEach(({ item, recep }) => {
-
+      const idCompra = item.id;
       const cliente = item.cliente || item.nombre || "";
       const producto = item.producto || item.descripcion || "";
       const oc_coltrade = item.oc_coltrade || "";
